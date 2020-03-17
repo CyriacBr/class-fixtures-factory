@@ -5,7 +5,8 @@ import {
 } from './BaseMetadataStore';
 import { Class } from '../common/typings';
 import reflect, { PropertyReflection } from 'tinspector';
-import { FixtureOptions } from '../decorators/fixture';
+import { FixtureOptions } from '../decorators/Fixture';
+import { getEnumValues } from '../common/utils';
 
 export class DefaultMetadataStore extends BaseMetadataStore {
   make(classType: Class): void {
@@ -26,37 +27,37 @@ export class DefaultMetadataStore extends BaseMetadataStore {
     const meta: Partial<PropertyMetadata> = {
       name: prop.name,
     };
-    if (typeof decorator === 'function') {
-      meta.input = decorator.bind(decorator, require('faker'));
-    } else if (typeof decorator === 'string') {
-      meta.input = () => decorator;
-    } else if (typeof decorator === 'object') {
-      if (decorator.ignore) return null;
-      meta.input = decorator.get;
-      const inputType = decorator.type?.();
-      if (inputType) {
-        if (Array.isArray(inputType)) {
-          meta.array = true;
-          if (inputType[0].prototype) {
-            meta.type = inputType[0].name;
-          } else {
-            meta.type = 'enum';
-            meta.enum = true;
+    if (decorator) {
+      if (typeof decorator === 'function') {
+        meta.input = decorator.bind(decorator, require('faker'));
+      } else if (typeof decorator === 'string') {
+        meta.input = () => decorator;
+      } else if (typeof decorator === 'object') {
+        if (decorator.ignore) return null;
+        meta.input = decorator.get;
+        let inputType: any = decorator.type?.();
+        if (inputType) {
+          if (Array.isArray(inputType)) {
+            inputType = inputType[0];
+            meta.array = true;
+            meta.min = decorator.min || 1;
+            meta.max = decorator.max || 3;
           }
-          meta.min = decorator.min || 1;
-          meta.max = decorator.max || 3;
-        } else {
-          if ((inputType as any).prototype) {
-            meta.type = (inputType as any).name;
-          } else {
-            meta.type = 'enum';
-            meta.enum = true;
+          if (!inputType.prototype) {
+            throw new Error(
+              `Only pass class names to "type" in @Fixture({ type: () => Foo})`
+            );
           }
+          meta.type = inputType.name;
+        }
+        if (decorator.enum) {
+          meta.enum = true;
+          meta.items = getEnumValues(decorator.enum);
         }
       }
     }
+    console.log('prop :', prop);
     console.log('meta :', meta);
-    console.log('meta.input() :', meta.input?.());
     if (!meta.type) {
       if (!prop.type) return null;
       else if (Array.isArray(prop.type)) {
@@ -69,6 +70,11 @@ export class DefaultMetadataStore extends BaseMetadataStore {
           meta.type = name.toLowerCase();
         }
       }
+    }
+    if (!meta.type) {
+      throw new Error(
+        `Couldn't extract the type of "${meta.name}". Use @Fixture({ type: () => Foo })`
+      );
     }
     return meta as PropertyMetadata;
   }

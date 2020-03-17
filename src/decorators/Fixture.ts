@@ -19,7 +19,7 @@ export const FixtureMetadata: {
   };
 } = {};
 
-export function Fixture(options: FixtureOptions) {
+export function Fixture(options?: FixtureOptions) {
   return decorateProperty({
     type: 'Fixture',
     value: options,

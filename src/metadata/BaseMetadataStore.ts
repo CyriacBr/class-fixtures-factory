@@ -9,6 +9,7 @@ export interface PropertyMetadata {
   name: string;
   type: string;
   enum?: boolean;
+  items?: any[];
   array?: boolean;
   ignore?: boolean;
   min?: number;
