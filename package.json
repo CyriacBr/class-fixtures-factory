@@ -1,0 +1,103 @@
+{
+  "version": "1.0.0",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=10"
+  },
+  "scripts": {
+    "start": "cyriacbr-tsdx watch",
+    "build": "cyriacbr-tsdx build",
+    "test": "cyriacbr-tsdx test",
+    "lint": "cyriacbr-tsdx lint",
+    "release": "standard-version"
+  },
+  "peerDependencies": {},
+  "name": "class-fixtures-factory",
+  "author": "CyriacBr",
+  "module": "dist/class-fixtures-factory.esm.js",
+  "devDependencies": {
+    "@commitlint/cli": "^8.3.4",
+    "@commitlint/config-conventional": "^8.3.4",
+    "@cyriacbr/tsdx": "^0.12.35",
+    "@types/jest": "^25.1.4",
+    "@typescript-eslint/eslint-plugin": "^2.16.0",
+    "@typescript-eslint/parser": "^2.16.0",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.9.0",
+    "eslint-plugin-import": "^2.20.0",
+    "eslint-plugin-jest": "^23.6.0",
+    "eslint-plugin-jest-formatting": "^1.2.0",
+    "eslint-plugin-prettier": "^3.1.2",
+    "husky": "^4.2.3",
+    "lint-staged": "^10.0.8",
+    "prettier": "^1.19.1",
+    "standard-version": "7.1.0",
+    "tslib": "^1.11.1",
+    "typescript": "^3.8.3"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
+      "pre-push": "git diff HEAD --quiet && lerna run test"
+    }
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix"
+    ]
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es6": true,
+      "node": true,
+      "jest/globals": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "plugin:prettier/recommended",
+      "plugin:jest-formatting/recommended"
+    ],
+    "ignorePatterns": [
+      "node_modules/"
+    ],
+    "globals": {
+      "Atomics": "readonly",
+      "SharedArrayBuffer": "readonly"
+    },
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "ecmaFeatures": {
+        "jsx": true
+      },
+      "ecmaVersion": 2018,
+      "sourceType": "module"
+    },
+    "plugins": [
+      "@typescript-eslint",
+      "jest"
+    ],
+    "rules": {
+      "no-unused-vars": "off"
+    }
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "dependencies": {
+    "tinspector": "^2.3.1"
+  }
+}
