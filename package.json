@@ -44,7 +44,7 @@
     "hooks": {
       "pre-commit": "lint-staged",
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
-      "pre-push": "git diff HEAD --quiet && lerna run test"
+      "pre-push": "git diff HEAD --quiet && yarn run test"
     }
   },
   "commitlint": {
