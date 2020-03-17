@@ -98,6 +98,8 @@
     "trailingComma": "es5"
   },
   "dependencies": {
+    "@types/faker": "^4.1.10",
+    "faker": "^4.1.0",
     "tinspector": "^2.3.1"
   }
 }

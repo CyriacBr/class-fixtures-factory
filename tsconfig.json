@@ -1,6 +1,8 @@
 {
   "include": ["src", "types", "test"],
   "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "module": "esnext",
     "lib": ["dom", "esnext"],
     "importHelpers": true,
