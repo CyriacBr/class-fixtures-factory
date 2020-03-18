@@ -28,6 +28,7 @@
     "@ls-lint/ls-lint": "^1.7.0",
     "@types/jest": "^25.1.4",
     "@types/pino": "^5.17.0",
+    "@types/treeify": "^1.0.0",
     "@typescript-eslint/eslint-plugin": "^2.16.0",
     "@typescript-eslint/parser": "^2.16.0",
     "chalk": "^3.0.0",
@@ -44,6 +45,7 @@
     "pkg-ok": "^2.3.1",
     "prettier": "^1.19.1",
     "standard-version": "7.1.0",
+    "treeify": "^1.1.0",
     "tslib": "^1.11.1",
     "typescript": "^3.8.3"
   },

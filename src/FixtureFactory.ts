@@ -7,6 +7,7 @@ import {
 import { Class } from './common/typings';
 import faker from 'faker';
 import chalk from 'chalk';
+import treeify from 'treeify';
 
 export interface FactoryOptions {
   logging?: boolean;
@@ -60,46 +61,54 @@ export class FixtureFactory {
     }
   }
 
-  logResult(object: any, meta: ClassMetadata, level = 0) {
-    const trailing = [...Array(level).keys()].map(() => '──').join('');
-    const padding = `${chalk.gray(`├─${trailing}`)}──`;
-
-    if (level === 0) {
-      this.log(`Generated an instance of "${chalk.cyan(meta.name)}"`);
-    } else {
-      this.log(
-        `${chalk.gray(`├─${trailing}`)}──Generated an instance of "${chalk.cyan(
+  logResult(object: any, meta: ClassMetadata, duration: number) {
+    if (!this.options.logging) return;
+    const populateTree = (
+      object: any,
+      meta: ClassMetadata,
+      _tree: any = {},
+      number = 0
+    ) => {
+      const tree: any = (_tree[
+        `Generated an instance of ${chalk.gray('"')}${chalk.cyan(
           meta.name
-        )}"`
-      );
-    }
+        )}${chalk.gray('"')}${number ? `${chalk.gray(` (${number})`)}` : ''}`
+      ] = {});
 
-    for (const prop of meta.properties) {
-      const name = chalk.cyan(prop.name);
-      const value = object[prop.name];
-      if (prop.ignore) {
-        this.log(`${padding}` + chalk.gray(`("${name}" ignored)`));
-      } else if (prop.input) {
-        this.log(`${padding}` + chalk.gray(`${name}: custom value`));
-      } else if (
-        typeof value === 'object' &&
-        value.constructor &&
-        !(value instanceof Date) &&
-        !Array.isArray(value)
-      ) {
-        console.log('===============value :', value);
-        level += 1;
-        this.log(`${padding}` + `${name}:`);
-        const meta = this.store.get(prop.type);
-        this.logResult(value, meta, level);
-      } else {
-        this.log(`${padding}` + `${name}: ${value}`);
+      for (const prop of meta.properties) {
+        const name = chalk.cyan(prop.name);
+        const value = object[prop.name];
+        if (prop.ignore) {
+          tree[name] = chalk.gray(`(ignored)`);
+        } else if (prop.input) {
+          tree[name] = chalk.gray(`(custom value)`);
+        } else if (
+          typeof value === 'object' &&
+          value.constructor &&
+          !(value instanceof Date) &&
+          !Array.isArray(value)
+        ) {
+          tree[name] = {};
+          const meta = this.store.get(prop.type);
+          populateTree(value, meta, tree[name]);
+        } else if (Array.isArray(value)) {
+          tree[name] = {};
+          const meta = this.store.get(prop.type);
+          for (const [i, item] of Object.entries(value)) {
+            populateTree(item, meta, tree[name], Number(i) + 1);
+          }
+        } else {
+          tree[name] = value;
+        }
       }
-    }
-    if (meta.properties.length === 0) {
-      this.log(`${padding}` + `(no properties)`);
-    }
-    this.log(`${padding}${chalk.green('Done')}`);
+      if (meta.properties.length === 0) {
+        tree['chalk.gray(`(no properties)`)'] = null;
+      }
+    };
+    const tree: any = {};
+    populateTree(object, meta, tree);
+    tree[`${chalk.green('Done')} ${chalk.gray(`(${duration}ms)`)}`] = null;
+    this.log('\n' + treeify.asTree(tree, true, false));
   }
 
   register(classTypes: Class[]) {
@@ -119,11 +128,15 @@ export class FixtureFactory {
 
     const result: FactoryResult<InstanceType<T>> = {
       one: () => {
+        const startDate = new Date();
+
         const object = this._make(meta, classType, propsToIgnore);
         for (const [key, value] of Object.entries(userInput)) {
           object[key] = value;
         }
-        this.logResult(object, meta);
+
+        const elapsed = +new Date() - +startDate;
+        this.logResult(object, meta, elapsed);
         return object;
       },
       many: (x: number) => {
