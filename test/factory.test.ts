@@ -2,7 +2,7 @@ import { FixtureFactory } from '../src/FixtureFactory';
 import { Fixture } from '../src/decorators/Fixture';
 
 describe(`FixtureFactory`, () => {
-  const factory = new FixtureFactory();
+  const factory = new FixtureFactory({ logging: true });
 
   it(`makes metadata of registered entities`, () => {
     class DummyAuthor {}

@@ -6,6 +6,12 @@ import {
 } from './metadata';
 import { Class } from './common/typings';
 import faker from 'faker';
+import chalk from 'chalk';
+
+export interface FactoryOptions {
+  logging?: boolean;
+  maxDepth?: number;
+}
 
 type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends Array<infer U>
@@ -25,9 +31,19 @@ export interface FactoryResult<T> {
 export class FixtureFactory {
   private store: BaseMetadataStore;
   private classTypes: Record<string, Class> = {};
+  private DEFAULT_OPTIONS: FactoryOptions = {
+    logging: false,
+    maxDepth: 4,
+  };
+  private options!: FactoryOptions;
+  private depthness: string[] = [];
 
-  constructor() {
+  constructor(options?: FactoryOptions) {
     this.store = new DefaultMetadataStore();
+    this.options = {
+      ...this.DEFAULT_OPTIONS,
+      ...(options || {}),
+    };
   }
 
   setMetadataStore(store: BaseMetadataStore) {
@@ -36,6 +52,54 @@ export class FixtureFactory {
 
   getStore() {
     return this.store;
+  }
+
+  log(msg: string) {
+    if (this.options.logging) {
+      console.log(chalk.gray('[FixtureFactory] '), msg);
+    }
+  }
+
+  logResult(object: any, meta: ClassMetadata, level = 0) {
+    const trailing = [...Array(level).keys()].map(() => '──').join('');
+    const padding = `${chalk.gray(`├─${trailing}`)}──`;
+
+    if (level === 0) {
+      this.log(`Generated an instance of "${chalk.cyan(meta.name)}"`);
+    } else {
+      this.log(
+        `${chalk.gray(`├─${trailing}`)}──Generated an instance of "${chalk.cyan(
+          meta.name
+        )}"`
+      );
+    }
+
+    for (const prop of meta.properties) {
+      const name = chalk.cyan(prop.name);
+      const value = object[prop.name];
+      if (prop.ignore) {
+        this.log(`${padding}` + chalk.gray(`("${name}" ignored)`));
+      } else if (prop.input) {
+        this.log(`${padding}` + chalk.gray(`${name}: custom value`));
+      } else if (
+        typeof value === 'object' &&
+        value.constructor &&
+        !(value instanceof Date) &&
+        !Array.isArray(value)
+      ) {
+        console.log('===============value :', value);
+        level += 1;
+        this.log(`${padding}` + `${name}:`);
+        const meta = this.store.get(prop.type);
+        this.logResult(value, meta, level);
+      } else {
+        this.log(`${padding}` + `${name}: ${value}`);
+      }
+    }
+    if (meta.properties.length === 0) {
+      this.log(`${padding}` + `(no properties)`);
+    }
+    this.log(`${padding}${chalk.green('Done')}`);
   }
 
   register(classTypes: Class[]) {
@@ -51,12 +115,15 @@ export class FixtureFactory {
     let propsToIgnore: string[] = [];
     let userInput: DeepPartial<T> = {};
 
+    this.depthness = [];
+
     const result: FactoryResult<InstanceType<T>> = {
       one: () => {
         const object = this._make(meta, classType, propsToIgnore);
         for (const [key, value] of Object.entries(userInput)) {
           object[key] = value;
         }
+        this.logResult(object, meta);
         return object;
       },
       many: (x: number) => {
@@ -82,6 +149,8 @@ export class FixtureFactory {
     classType: Class,
     propsToIgnore: string[] = []
   ) {
+    this.depthness.push(classType.name);
+
     const object = new classType();
     for (const prop of meta.properties) {
       if (propsToIgnore.includes(prop.name)) continue;
