@@ -9,7 +9,7 @@ import { FixtureOptions } from '../decorators/Fixture';
 import { getEnumValues } from '../common/utils';
 
 export class DefaultMetadataStore extends BaseMetadataStore {
-  make(classType: Class): void {
+  make(classType: Class): ClassMetadata {
     const metadata = reflect(classType);
     const classMetadata: ClassMetadata = {
       name: metadata.name,
@@ -17,7 +17,7 @@ export class DefaultMetadataStore extends BaseMetadataStore {
         .map(prop => this.makePropertyMetadata(prop)!)
         .filter(Boolean),
     };
-    this.store[classType.name] = classMetadata;
+    return (this.store[classType.name] = classMetadata);
   }
 
   private makePropertyMetadata(
@@ -26,6 +26,7 @@ export class DefaultMetadataStore extends BaseMetadataStore {
     const decorator = this.getFixtureDecorator(prop);
     const meta: Partial<PropertyMetadata> = {
       name: prop.name,
+      scalar: prop.typeClassification === 'Primitive',
     };
     if (decorator) {
       if (typeof decorator === 'function') {
@@ -61,7 +62,6 @@ export class DefaultMetadataStore extends BaseMetadataStore {
         }
       }
     }
-    console.log('prop :', prop);
     if (!meta.type) {
       if (!prop.type) return null;
       else if (Array.isArray(prop.type)) {

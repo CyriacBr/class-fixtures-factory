@@ -1,6 +1,7 @@
 {
   "include": ["src", "types", "test"],
   "compilerOptions": {
+    "downlevelIteration": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "module": "esnext",

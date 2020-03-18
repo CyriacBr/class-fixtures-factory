@@ -37,6 +37,8 @@
     "eslint-plugin-prettier": "^3.1.2",
     "husky": "^4.2.3",
     "lint-staged": "^10.0.8",
+    "pino": "^5.17.0",
+    "pino-pretty": "^3.6.1",
     "pkg-ok": "^2.3.1",
     "prettier": "^1.19.1",
     "standard-version": "7.1.0",
