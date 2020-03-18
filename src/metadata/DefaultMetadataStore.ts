@@ -45,10 +45,15 @@ export class DefaultMetadataStore extends BaseMetadataStore {
           }
           if (!inputType.prototype) {
             throw new Error(
-              `Only pass class names to "type" in @Fixture({ type: () => Foo})`
+              `Only pass class names to "type" in @Fixture({ type: () => Foo}) for "${meta.name}"`
             );
           }
-          meta.type = inputType.name;
+          const { name } = inputType;
+          if (!['string', 'number', 'boolean'].includes(name.toLowerCase())) {
+            meta.type = name;
+          } else {
+            meta.type = name.toLowerCase();
+          }
         }
         if (decorator.enum) {
           meta.enum = true;
@@ -57,11 +62,12 @@ export class DefaultMetadataStore extends BaseMetadataStore {
       }
     }
     console.log('prop :', prop);
-    console.log('meta :', meta);
     if (!meta.type) {
       if (!prop.type) return null;
       else if (Array.isArray(prop.type)) {
-        return null;
+        throw new Error(
+          `The type of "${meta.name}" seems to be an array. Use Use @Fixture({ type: () => Foo })`
+        );
       } else if (prop.type instanceof Function) {
         const { name } = prop.type as Function;
         if (!['string', 'number', 'boolean'].includes(name.toLowerCase())) {

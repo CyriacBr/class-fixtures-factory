@@ -14,7 +14,8 @@
     "build": "cyriacbr-tsdx build",
     "test": "cyriacbr-tsdx test",
     "lint": "cyriacbr-tsdx lint",
-    "release": "standard-version"
+    "release": "standard-version",
+    "prepublish": "pkg-ok"
   },
   "peerDependencies": {},
   "name": "class-fixtures-factory",
@@ -24,6 +25,7 @@
     "@commitlint/cli": "^8.3.4",
     "@commitlint/config-conventional": "^8.3.4",
     "@cyriacbr/tsdx": "^0.12.35",
+    "@ls-lint/ls-lint": "^1.7.0",
     "@types/jest": "^25.1.4",
     "@typescript-eslint/eslint-plugin": "^2.16.0",
     "@typescript-eslint/parser": "^2.16.0",
@@ -35,6 +37,7 @@
     "eslint-plugin-prettier": "^3.1.2",
     "husky": "^4.2.3",
     "lint-staged": "^10.0.8",
+    "pkg-ok": "^2.3.1",
     "prettier": "^1.19.1",
     "standard-version": "7.1.0",
     "tslib": "^1.11.1",

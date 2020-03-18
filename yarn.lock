@@ -497,6 +497,11 @@
     "@types/yargs" "^15.0.0"
     chalk "^3.0.0"
 
+"@ls-lint/ls-lint@^1.7.0":
+  version "1.7.0"
+  resolved "https://registry.npmjs.org/@ls-lint/ls-lint/-/ls-lint-1.7.0.tgz#38022c901a3c2bd1ecb9b160a5499aecbb317492"
+  integrity sha512-mLCpo0sEtCfqgog4ieMR9qzSchANW1cAgSAn3A42Fd02XYqC73bxkjbNDQ4YAgIAn0nJgQnI6i1zkbshyESgYw==
+
 "@marionebl/sander@^0.6.0":
   version "0.6.1"
   resolved "https://registry.npmjs.org/@marionebl/sander/-/sander-0.6.1.tgz#1958965874f24bc51be48875feb50d642fc41f7b"
@@ -4536,6 +4541,11 @@ node-notifier@^5.4.2:
     shellwords "^0.1.1"
     which "^1.3.0"
 
+normalize-newline@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.npmjs.org/normalize-newline/-/normalize-newline-3.0.0.tgz#1cbea804aba436001f83938ab21ec039d69ae9d3"
+  integrity sha1-HL6oBKukNgAfg5OKsh7AOdaa6dM=
+
 normalize-package-data@^2.3.0, normalize-package-data@^2.3.2, normalize-package-data@^2.3.4, normalize-package-data@^2.3.5:
   version "2.5.0"
   resolved "https://registry.npmjs.org/normalize-package-data/-/normalize-package-data-2.5.0.tgz#e66db1838b200c1dfc233225d12cb36520e234a8"
@@ -5002,6 +5012,15 @@ pkg-dir@^4.1.0, pkg-dir@^4.2.0:
   integrity sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==
   dependencies:
     find-up "^4.0.0"
+
+pkg-ok@^2.3.1:
+  version "2.3.1"
+  resolved "https://registry.npmjs.org/pkg-ok/-/pkg-ok-2.3.1.tgz#d6dc4f079445a540db3656c1fc158517bc9f33c4"
+  integrity sha512-ObdQTDZO+zUJpljXM5HZdx+354o5qbQUs05oilAp2WisGoAmFw80y4RKMduZOmGpuXV1DWJ7PkZnkybd8QB68g==
+  dependencies:
+    chalk "^2.4.1"
+    meow "^5.0.0"
+    normalize-newline "^3.0.0"
 
 please-upgrade-node@^3.2.0:
   version "3.2.0"

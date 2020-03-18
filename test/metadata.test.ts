@@ -18,11 +18,16 @@ const store = new DefaultMetadataStore();
 
 describe('Metadata Store', () => {
   describe(`metadata extraction`, () => {
+    interface Address {
+      city: string;
+    }
     class Author {
       @Fixture()
       firstName!: string;
       @Fixture('{{name.lastName}}')
       lastName!: string;
+      @Fixture({ get: () => '{{name.firstName}} {{name.lastName}}' })
+      fullName!: string;
       @Fixture()
       age!: number;
       @Fixture()
@@ -31,10 +36,13 @@ describe('Metadata Store', () => {
       mood!: Mood;
       @Fixture({ enum: PetPreference })
       petPreference!: PetPreference;
-      @Fixture()
+      @Fixture({ type: () => [Number], min: 2, max: 2 })
       position!: [number, number];
-      @Fixture()
+      @Fixture({ type: () => [String] })
       surnames!: string[];
+      @Fixture()
+      address!: Address;
+      @Fixture({ type: () => [Book] })
       books!: Book[];
       @Fixture(faker => faker?.address.city())
       city!: string;
@@ -70,6 +78,13 @@ describe('Metadata Store', () => {
 
       expect(petProp?.input).toBeDefined();
       expect(petProp?.input?.()).toMatchObject({ petName: 'foo' });
+    });
+
+    it(`@Fixture({ get: (faker) => string) })`, () => {
+      const fullNameProp = metadata.properties.find(p => p.name === 'fullName');
+
+      expect(fullNameProp?.input).toBeDefined();
+      expect(typeof fullNameProp?.input?.()).toBe('string');
     });
 
     it(`string`, () => {
@@ -120,6 +135,61 @@ describe('Metadata Store', () => {
       } as PropertyMetadata);
     });
 
-    it(`throws is passing anything than a clas to type: () => Foo`, () => {});
+    it(`array`, () => {
+      const surnamesProp = metadata.properties.find(p => p.name === 'surnames');
+
+      expect(surnamesProp).toMatchObject({
+        type: 'string',
+        array: true,
+      } as PropertyMetadata);
+    });
+
+    it(`class`, () => {
+      const booksProp = metadata.properties.find(p => p.name === 'books');
+
+      expect(booksProp).toMatchObject({
+        type: 'Book',
+        array: true,
+      } as PropertyMetadata);
+    });
+
+    it(`array with min and max`, () => {
+      const positionProp = metadata.properties.find(p => p.name === 'position');
+
+      expect(positionProp).toMatchObject({
+        type: 'number',
+        array: true,
+        max: 2,
+        min: 2,
+      } as PropertyMetadata);
+    });
+
+    it(`object`, () => {
+      const addressProp = metadata.properties.find(p => p.name === 'address');
+
+      expect(addressProp).toMatchObject({
+        type: 'Object',
+      } as PropertyMetadata);
+    });
+
+    it(`throws if an array type is used without @Fixture(type: () => Foo)`, () => {
+      class Author {
+        @Fixture()
+        surnames!: string[];
+      }
+      expect(() => store.make(Author)).toThrow(
+        'The type of "surnames" seems to be an array. Use Use @Fixture({ type: () => Foo })'
+      );
+    });
+
+    it(`throws if anything than a class name is provided to @Fixture(type: () => Foo)`, () => {
+      class Author {
+        @Fixture({ type: () => ({ foo: 'bar' }) })
+        pet!: any;
+      }
+      expect(() => store.make(Author)).toThrow(
+        `Only pass class names to "type" in @Fixture({ type: () => Foo}) for "pet"`
+      );
+    });
   });
 });
