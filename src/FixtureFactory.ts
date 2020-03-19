@@ -106,17 +106,21 @@ export class FixtureFactory {
           const meta = this.store.get(prop.type);
           populateTree(value, meta, tree[name]);
         } else if (Array.isArray(value)) {
-          tree[name] = {};
-          const meta = this.store.get(prop.type);
-          for (const [i, item] of Object.entries(value)) {
-            populateTree(item, meta, tree[name], Number(i) + 1);
+          if (['string', 'number', 'boolean', 'Date'].includes(prop.type)) {
+            tree[name] = value.join(',');
+          } else {
+            tree[name] = {};
+            const meta = this.store.get(prop.type);
+            for (const [i, item] of Object.entries(value)) {
+              populateTree(item, meta, tree[name], Number(i) + 1);
+            }
           }
         } else {
           tree[name] = value;
         }
       }
       if (meta.properties.length === 0) {
-        tree['chalk.gray(`(no properties)`)'] = null;
+        tree[`${chalk.gray(`(no properties)`)}`] = null;
       }
     };
     const tree: any = {};
