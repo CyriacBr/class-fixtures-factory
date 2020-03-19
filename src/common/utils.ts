@@ -1,3 +1,7 @@
+/**
+ * Get possible values from an enum
+ * @param enumObj
+ */
 export const getEnumValues = (enumObj: any) => {
   const keysList = Object.getOwnPropertyNames(enumObj).filter(key => {
     // eslint-disable-next-line no-prototype-builtins

@@ -1,6 +1,21 @@
 {
   "version": "1.0.0",
+  "name": "class-fixtures-factory",
+  "author": "CyriacBr",
   "license": "MIT",
+  "keywords": [
+    "typescript",
+    "class",
+    "fixture",
+    "factory",
+    "generator",
+    "entity",
+    "fixtures"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CyriacBr/class-fixtures-factory.git"
+  },
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "files": [
@@ -14,20 +29,21 @@
     "build": "cyriacbr-tsdx build",
     "test": "cyriacbr-tsdx test",
     "lint": "cyriacbr-tsdx lint",
+    "release:first": "standard-version --first-release",
     "release": "standard-version",
-    "prepublish": "pkg-ok"
+    "release:publish": "git push --follow-tags origin master && yarn publish",
+    "prepublish": "yarn build && pkg-ok",
+    "docs:api": "api-extractor run --local --verbose && cd docs && api-documenter markdown"
   },
   "peerDependencies": {},
-  "name": "class-fixtures-factory",
-  "author": "CyriacBr",
   "module": "dist/class-fixtures-factory.esm.js",
   "devDependencies": {
     "@commitlint/cli": "^8.3.4",
     "@commitlint/config-conventional": "^8.3.4",
     "@cyriacbr/tsdx": "^0.12.35",
-    "@ls-lint/ls-lint": "^1.7.0",
+    "@microsoft/api-documenter": "^7.7.14",
+    "@microsoft/api-extractor": "^7.7.10",
     "@types/jest": "^25.1.4",
-    "@types/pino": "^5.17.0",
     "@types/treeify": "^1.0.0",
     "@typescript-eslint/eslint-plugin": "^2.16.0",
     "@typescript-eslint/parser": "^2.16.0",
@@ -40,8 +56,6 @@
     "eslint-plugin-prettier": "^3.1.2",
     "husky": "^4.2.3",
     "lint-staged": "^10.0.8",
-    "pino": "^5.17.0",
-    "pino-pretty": "^3.6.1",
     "pkg-ok": "^2.3.1",
     "prettier": "^1.19.1",
     "standard-version": "7.1.0",

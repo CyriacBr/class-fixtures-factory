@@ -47,21 +47,35 @@ export class FixtureFactory {
     };
   }
 
+  /**
+   * You can set a custom metadata store
+   * for extension purposes.
+   * The store should extends `BaseMetadataStore`
+   * @param store
+   */
   setMetadataStore(store: BaseMetadataStore) {
     this.store = store;
   }
 
+  /**
+   * Returns the instance of the metadata store
+   */
   getStore() {
     return this.store;
   }
 
+  /**
+   * Attemps to log a message.
+   * Won't work if logging is disabled.
+   * @param msg
+   */
   log(msg: string) {
     if (this.options.logging) {
       console.log(chalk.gray('[FixtureFactory] '), msg);
     }
   }
 
-  logResult(object: any, meta: ClassMetadata, duration: number) {
+  private logResult(object: any, meta: ClassMetadata, duration: number) {
     if (!this.options.logging) return;
     const populateTree = (
       object: any,
@@ -111,6 +125,10 @@ export class FixtureFactory {
     this.log('\n' + treeify.asTree(tree, true, false));
   }
 
+  /**
+   * Register classes to be used by the factory
+   * @param classTypes
+   */
   register(classTypes: Class[]) {
     for (const classType of classTypes) {
       this.store.make(classType);
@@ -118,6 +136,10 @@ export class FixtureFactory {
     }
   }
 
+  /**
+   * Generate fixtures
+   * @param classType
+   */
   make<T extends Class>(classType: T): FactoryResult<InstanceType<T>> {
     this.store.make(classType);
     const meta = this.store.get(classType);
