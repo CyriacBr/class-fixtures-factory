@@ -225,6 +225,22 @@ describe(`FixtureFactory`, () => {
       expect(person.book.author).toBeUndefined();
     });
 
+    it(`class [many to many]`, () => {
+      class Book {
+        @Fixture({ type: () => [BookTag] })
+        tags!: BookTag[];
+      }
+      class BookTag {
+        @Fixture({ type: () => [Book] })
+        books!: Book[];
+      }
+      factory.register([BookTag, Book]);
+
+      const book = factory.make(Book).one();
+      expect(book.tags[0]).toBeInstanceOf(BookTag);
+      expect(book.tags[0].books).toBeUndefined();
+    });
+
     it(`multi-level nesting`, () => {
       class Author {
         @Fixture()

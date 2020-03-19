@@ -7,7 +7,7 @@ import {
 import { Class } from './common/typings';
 import faker from 'faker';
 import chalk from 'chalk';
-import treeify from 'treeify';
+import { FactoryLogger } from './FactoryLogger';
 
 export interface FactoryOptions {
   logging?: boolean;
@@ -38,6 +38,7 @@ export class FixtureFactory {
   };
   private options!: FactoryOptions;
   private depthness: string[] = [];
+  private loggers: FactoryLogger[] = [];
 
   constructor(options?: FactoryOptions) {
     this.store = new DefaultMetadataStore();
@@ -69,64 +70,34 @@ export class FixtureFactory {
    * Won't work if logging is disabled.
    * @param msg
    */
-  log(msg: string) {
-    if (this.options.logging) {
+  log(msg: string, force = false) {
+    if (force || this.options.logging) {
       console.log(chalk.gray('[FixtureFactory] '), msg);
     }
   }
 
-  private logResult(object: any, meta: ClassMetadata, duration: number) {
-    if (!this.options.logging) return;
-    const populateTree = (
-      object: any,
-      meta: ClassMetadata,
-      _tree: any = {},
-      number = 0
-    ) => {
-      const tree: any = (_tree[
-        `Generated an instance of ${chalk.gray('"')}${chalk.cyan(
-          meta.name
-        )}${chalk.gray('"')}${number ? `${chalk.gray(` (${number})`)}` : ''}`
-      ] = {});
+  newLogger(meta: ClassMetadata) {
+    this.loggers.unshift(new FactoryLogger());
+    const logger = this.logger();
+    logger.start(meta);
+    return logger;
+  }
 
-      for (const prop of meta.properties) {
-        const name = chalk.cyan(prop.name);
-        const value = object[prop.name];
-        if (prop.ignore) {
-          tree[name] = chalk.gray(`(ignored)`);
-        } else if (prop.input) {
-          tree[name] = chalk.gray(`(custom value)`);
-        } else if (
-          typeof value === 'object' &&
-          value.constructor &&
-          !(value instanceof Date) &&
-          !Array.isArray(value)
-        ) {
-          tree[name] = {};
-          const meta = this.store.get(prop.type);
-          populateTree(value, meta, tree[name]);
-        } else if (Array.isArray(value)) {
-          if (['string', 'number', 'boolean', 'Date'].includes(prop.type)) {
-            tree[name] = value.join(',');
-          } else {
-            tree[name] = {};
-            const meta = this.store.get(prop.type);
-            for (const [i, item] of Object.entries(value)) {
-              populateTree(item, meta, tree[name], Number(i) + 1);
-            }
-          }
-        } else {
-          tree[name] = value;
-        }
-      }
-      if (meta.properties.length === 0) {
-        tree[`${chalk.gray(`(no properties)`)}`] = null;
-      }
-    };
-    const tree: any = {};
-    populateTree(object, meta, tree);
-    tree[`${chalk.green('Done')} ${chalk.gray(`(${duration}ms)`)}`] = null;
-    this.log('\n' + treeify.asTree(tree, true, false));
+  logger() {
+    return this.loggers[0];
+  }
+
+  printLogger(dispose = false) {
+    const logger = this.logger();
+    if (!logger) return;
+    this.log('\n' + logger.log());
+    if (dispose) {
+      this.disposeLogger();
+    }
+  }
+
+  disposeLogger() {
+    this.loggers.shift();
   }
 
   /**
@@ -154,16 +125,29 @@ export class FixtureFactory {
 
     const result: FactoryResult<InstanceType<T>> = {
       one: () => {
+        let error = false;
+        let object: any = {};
         const startDate = new Date();
+        this.newLogger(meta);
 
-        const object = this._make(meta, classType, propsToIgnore);
-        for (const [key, value] of Object.entries(userInput)) {
-          object[key] = value;
+        try {
+          object = this._make(meta, classType, propsToIgnore);
+          for (const [key, value] of Object.entries(userInput)) {
+            object[key] = value;
+          }
+        } catch (err) {
+          this.log(
+            chalk.red(`An error occured while generating "${meta.name}"`),
+            true
+          );
+          console.error(err);
+          error = true;
         }
 
         const elapsed = +new Date() - +startDate;
-        this.logResult(object, meta, elapsed);
-        return object;
+        this.logger()[error ? 'onError' : 'onDone'](elapsed);
+        this.printLogger(true);
+        return error ? null : object;
       },
       many: (x: number) => {
         return [...Array(x).keys()].map(() => result.one());
@@ -207,10 +191,13 @@ export class FixtureFactory {
 
   protected makeProperty(prop: PropertyMetadata, meta: ClassMetadata): any {
     if (prop.input) {
+      this.logger().onCustomProp(prop);
       return prop.input();
     }
     if (prop.scalar) {
-      return this.makeScalarProperty(prop);
+      const value = this.makeScalarProperty(prop);
+      this.logger().onNormalProp(prop, value);
+      return value;
     } else if (prop.array) {
       return this.makeArrayProp(prop, meta);
     }
@@ -269,11 +256,20 @@ export class FixtureFactory {
   private makeObjectProp(meta: ClassMetadata, prop: PropertyMetadata) {
     const refClassMeta = this.store.get(prop.type);
     const props = this.findRefSideProps(meta, prop);
-    return this._make(
+
+    const oldLogger = this.logger();
+    const logger = this.newLogger(refClassMeta);
+
+    const value = this._make(
       refClassMeta,
       this.classTypes[prop.type],
       props.map(p => p.name)
     );
+
+    oldLogger.onClassPropDone(prop, logger);
+    this.disposeLogger();
+
+    return value;
   }
 
   private findRefSideProps(meta: ClassMetadata, prop: PropertyMetadata) {
