@@ -9,6 +9,10 @@ import { FixtureOptions } from '../decorators/Fixture';
 import { getEnumValues } from '../common/utils';
 
 export class DefaultMetadataStore extends BaseMetadataStore {
+  /**
+   * Make type metadata for a class
+   * @param classType
+   */
   make(classType: Class): ClassMetadata {
     const metadata = reflect(classType);
     const classMetadata: ClassMetadata = {

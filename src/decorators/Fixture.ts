@@ -13,12 +13,11 @@ export type FixtureOptions =
       get?: ((faker?: Faker.FakerStatic) => string | undefined) | (() => any);
     };
 
-export const FixtureMetadata: {
-  [entityName: string]: {
-    [prop: string]: FixtureOptions;
-  };
-} = {};
-
+/**
+ * Decorator for providing metadata about a property
+ * or for customizing the generate fixture
+ * @param options
+ */
 export function Fixture(options?: FixtureOptions) {
   return decorateProperty({
     type: 'Fixture',
