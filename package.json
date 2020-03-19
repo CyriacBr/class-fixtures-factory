@@ -31,7 +31,7 @@
     "lint": "cyriacbr-tsdx lint",
     "release:first": "standard-version --first-release",
     "release": "standard-version",
-    "release:publish": "git push --follow-tags origin master && yarn publish",
+    "release:publish": "git push --follow-tags origin develop && yarn publish",
     "prepublish": "yarn build && pkg-ok",
     "docs:api": "api-extractor run --local --verbose && cd docs && api-documenter markdown"
   },
