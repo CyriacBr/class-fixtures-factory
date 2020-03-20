@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.2.0](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.1.0...v1.2.0) (2020-03-20)
+
+
+### Features
+
+* **factory:** added assigner ([3c9c3c1](https://github.com/CyriacBr/class-fixtures-factory/commit/3c9c3c1768b55a7f3bd8a674daab5d8fb04ecdbb))
+
 ## [1.1.0](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.0.2...v1.1.0) (2020-03-19)
 
 
