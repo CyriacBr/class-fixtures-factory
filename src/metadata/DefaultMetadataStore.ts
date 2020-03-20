@@ -9,6 +9,9 @@ import { FixtureOptions } from '../decorators/Fixture';
 import { getEnumValues } from '../common/utils';
 
 export class DefaultMetadataStore extends BaseMetadataStore {
+  constructor(private readonly acceptPartialResult = false) {
+    super();
+  }
   /**
    * Make type metadata for a class
    * @param classType
@@ -40,13 +43,13 @@ export class DefaultMetadataStore extends BaseMetadataStore {
       } else if (typeof decorator === 'object') {
         if (decorator.ignore) return null;
         meta.input = decorator.get;
+        meta.min = decorator.min || 1;
+        meta.max = decorator.max || 3;
         let inputType: any = decorator.type?.();
         if (inputType) {
           if (Array.isArray(inputType)) {
             inputType = inputType[0];
             meta.array = true;
-            meta.min = decorator.min || 1;
-            meta.max = decorator.max || 3;
           }
           if (!inputType.prototype) {
             throw new Error(
@@ -67,10 +70,13 @@ export class DefaultMetadataStore extends BaseMetadataStore {
       }
     }
     if (!meta.type) {
-      if (!prop.type) return null;
-      else if (Array.isArray(prop.type)) {
+      if (!prop.type) {
+        if (this.acceptPartialResult) {
+          return meta as PropertyMetadata;
+        }
+      } else if (Array.isArray(prop.type)) {
         throw new Error(
-          `The type of "${meta.name}" seems to be an array. Use Use @Fixture({ type: () => Foo })`
+          `The type of "${meta.name}" seems to be an array. Use @Fixture({ type: () => Foo })`
         );
       } else if (prop.type instanceof Function) {
         const { name } = prop.type as Function;
