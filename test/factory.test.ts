@@ -1,4 +1,4 @@
-import { FixtureFactory } from '../src/FixtureFactory';
+import { FixtureFactory, Assigner } from '../src/FixtureFactory';
 import { Fixture } from '../src/decorators/Fixture';
 
 describe(`FixtureFactory`, () => {
@@ -270,6 +270,27 @@ describe(`FixtureFactory`, () => {
       expect(author.books[0]).toBeDefined();
       expect(author.books[0].tags[0]).toBeDefined();
       expect(author.books[0].tags[0].category).toBeDefined();
+    });
+
+    it(`custom assigner`, () => {
+      const factory = new FixtureFactory({ logging: true });
+      const assigner: Assigner = (prop, obj, _value) => {
+        obj[prop.name] = 'foo';
+      };
+      const mock = jest.fn((...args: Parameters<Assigner>) =>
+        assigner(...args)
+      );
+      class Author {
+        @Fixture()
+        name!: string;
+      }
+      factory.register([Author]);
+      factory.setAssigner(mock);
+
+      const author = factory.make(Author).one();
+
+      expect(mock).toHaveBeenCalled();
+      expect(author.name).toBe('foo');
     });
   });
 });

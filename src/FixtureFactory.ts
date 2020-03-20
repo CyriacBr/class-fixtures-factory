@@ -29,6 +29,12 @@ export interface FactoryResult<T> {
   ignore: (...props: (keyof T)[]) => FactoryResult<T>;
 }
 
+export type Assigner = (
+  prop: PropertyMetadata,
+  object: any,
+  value: any
+) => void;
+
 export class FixtureFactory {
   private store: BaseMetadataStore;
   private classTypes: Record<string, Class> = {};
@@ -39,6 +45,7 @@ export class FixtureFactory {
   private options!: FactoryOptions;
   private depthness: string[] = [];
   private loggers: FactoryLogger[] = [];
+  private assigner: Assigner = this.defaultAssigner.bind(this);
 
   constructor(options?: FactoryOptions) {
     this.store = new DefaultMetadataStore();
@@ -46,6 +53,19 @@ export class FixtureFactory {
       ...this.DEFAULT_OPTIONS,
       ...(options || {}),
     };
+  }
+
+  private defaultAssigner(prop: PropertyMetadata, object: any, value: any) {
+    object[prop.name] = value;
+  }
+
+  /**
+   * Set a function to take charge of assigning values to
+   * generated objects
+   * @param fn
+   */
+  setAssigner(fn: Assigner) {
+    this.assigner = fn;
   }
 
   /**
@@ -178,7 +198,7 @@ export class FixtureFactory {
     for (const prop of meta.properties) {
       if (propsToIgnore.includes(prop.name)) continue;
       if (this.shouldIgnoreProperty(prop)) continue;
-      object[prop.name] = this.makeProperty(prop, meta);
+      this.assigner(prop, object, this.makeProperty(prop, meta));
     }
     return object;
   }

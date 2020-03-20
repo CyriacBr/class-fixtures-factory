@@ -1,6 +1,6 @@
 ![CI](https://github.com/CyriacBr/class-fixtures-factory/workflows/CI/badge.svg)
 
-# class-fixtures-factory
+# class-fixtures-factory <!-- omit in toc -->
 
 This lightweight lib is a class factory to generate fixtures on the fly. However, contarly to most (or rather all)
 libs out there, `class-fixtures-factory` generate fixtures from classes. This is handy when you
@@ -10,6 +10,13 @@ use decorators in your classes (when working with `class-validator`, `type-graph
 
 If you aren't familiar about what fixtures are, they are simply randomnly generated data and are often used for database
 seeding or for testing.
+
+- [Features](#features)
+- [Usage](#usage)
+  - [General](#general)
+  - [Customization](#customization)
+    - [Assigner](#assigner)
+  - [API](#api)
 
 ## Features
 
@@ -107,6 +114,17 @@ export class Author extends BaseEntity {
   @Fixture({ ignore: true })
   address: Address;
 }
+```
+
+#### Assigner
+
+You can provide a function to define how values are assigned to generated objects.
+```ts
+const assigner: Assigner = (prop, obj, value) => {
+  // default behavior
+  obj[prop.name] = value;
+}
+factory.setAssigner(assigner);
 ```
 
 ### API
