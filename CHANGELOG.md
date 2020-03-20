@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.2.1](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.2.0...v1.2.1) (2020-03-20)
+
+
+### Bug Fixes
+
+* **metadata:** can return partial results ([8a7c555](https://github.com/CyriacBr/class-fixtures-factory/commit/8a7c55504b323a7394b9ac721dcd3eee764487e7))
+
 ## [1.2.0](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.1.0...v1.2.0) (2020-03-20)
 
 
