@@ -7,8 +7,11 @@ import { Class } from '../common/typings';
 import reflect, { PropertyReflection } from 'tinspector';
 import { FixtureOptions } from '../decorators/Fixture';
 import { getEnumValues } from '../common/utils';
+import { ClassValidatorAdapter } from './ClassValidatorAdapter';
 
 export class DefaultMetadataStore extends BaseMetadataStore {
+  private cvAdapter = new ClassValidatorAdapter();
+
   constructor(private readonly acceptPartialResult = false) {
     super();
   }
@@ -17,12 +20,30 @@ export class DefaultMetadataStore extends BaseMetadataStore {
    * @param classType
    */
   make(classType: Class): ClassMetadata {
-    const metadata = reflect(classType);
+    const rMetadata = reflect(classType);
+    const cvMetadata = this.cvAdapter.extractMedatada(classType);
+
+    let properties = rMetadata.properties
+      .map(prop => this.makePropertyMetadata(prop)!)
+      .filter(Boolean);
+    for (const cvMeta of cvMetadata) {
+      let existing = properties.find(prop => prop.name === cvMeta.propertyName);
+      const deduced = this.cvAdapter.makePropertyMetadata(
+        cvMeta,
+        existing
+      ) as PropertyMetadata;
+      if (existing) {
+        properties = properties.map(prop =>
+          prop.name === cvMeta.propertyName ? deduced : existing!
+        );
+      } else {
+        properties.push(deduced);
+      }
+    }
+
     const classMetadata: ClassMetadata = {
-      name: metadata.name,
-      properties: metadata.properties
-        .map(prop => this.makePropertyMetadata(prop)!)
-        .filter(Boolean),
+      name: rMetadata.name,
+      properties: properties.filter(Boolean),
     };
     return (this.store[classType.name] = classMetadata);
   }

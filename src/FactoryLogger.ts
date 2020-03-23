@@ -50,6 +50,11 @@ export class FactoryLogger {
     this.tree[name] = value;
   }
 
+  onClassValidator(prop: PropertyMetadata, value: any) {
+    const name = chalk.cyan(prop.name);
+    this.tree[name] = `${chalk.gray('class-validator]')} ${value}`;
+  }
+
   onDone(duration: number) {
     this.tree[`${chalk.green('Done')} ${chalk.gray(`(${duration}ms)`)}`] = null;
   }

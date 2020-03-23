@@ -3,8 +3,8 @@
 # class-fixtures-factory <!-- omit in toc -->
 
 This lightweight lib is a class factory to generate fixtures on the fly. However, contarly to most (or rather all)
-libs out there, `class-fixtures-factory` generate fixtures from classes. This is handy when you
-do not want to write custom schema to generate fixtures.  
+libs out there, `class-fixtures-factory` generate fixtures from classes. This is handy when you already have
+classes as your source of truth and do not want to write custom schema to generate fixtures.  
 Also, because the lib is based on emitted TypeScript's metadata, if you heavily
 use decorators in your classes (when working with `class-validator`, `type-graphql`, for example), the setup will be even easier.
 
@@ -24,6 +24,7 @@ seeding or for testing.
 - Leverage `faker.js` for generating random values
 - Support relationships between classes
 - Customizable
+- Supporte `class-validator` decorators
 
 ## Usage
 
@@ -33,6 +34,7 @@ Because `class-fixtures-factory` relies on metadata, you'll have to:
 
 1. Register all the classes you're going to use
 2. Annoate properties with decorators
+   Besides the decorators shiped with the lib, you can also use `class-validator` decorators.
 
 ```ts
 import { FixtureFactory } from 'class-fixtures-factory';
@@ -66,8 +68,8 @@ const agedAuthor = factory
 As stated previously, you'll need to annotate your class properties somehow, because types metadata
 are used for generating fixtures.
 The lib exposes a `Fixture` decorator for that purpose and for further customization.
-If your properties are already annotated with decorators from the likes of `class-validator` and `type-graphql`,
-there's no need to use `Fixture`. However, there are some cases where this decorator is **mandatory**;
+If your properties are already annotated with decorators from `class-validator`, there's no need to use `Fixture`, mostly. 
+However, there are some cases where the `Fixture` decorator is **mandatory**;
 
 - If the type is an array
 - If the type is an enum
@@ -76,7 +78,7 @@ there's no need to use `Fixture`. However, there are some cases where this decor
 class Author {
   // decorator from class-validator
   // no need to use Fixture
-  @IsString()
+  @Length(5, 10)
   name: string;
 
   @Fixture()
@@ -107,7 +109,7 @@ export class Author extends BaseEntity {
   @Enum()
   mood: Mood;
 
-  @Fixture({ min: 3, max: 5 })
+  @Fixture({ type: () => [Book] }, { min: 3, max: 5 })
   books: Book[];
 
   // same as not using @Fixture at all

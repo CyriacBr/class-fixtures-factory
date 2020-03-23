@@ -8,6 +8,7 @@ import { Class } from './common/typings';
 import faker from 'faker';
 import chalk from 'chalk';
 import { FactoryLogger } from './FactoryLogger';
+//import { ClassValidatorAdapter } from './ClassValidatorAdapter';
 
 export interface FactoryOptions {
   logging?: boolean;
@@ -46,6 +47,7 @@ export class FixtureFactory {
   private depthness: string[] = [];
   private loggers: FactoryLogger[] = [];
   private assigner: Assigner = this.defaultAssigner.bind(this);
+  //private cvAdapter = new ClassValidatorAdapter();
 
   constructor(options?: FactoryOptions) {
     this.store = new DefaultMetadataStore();
@@ -250,6 +252,9 @@ export class FixtureFactory {
       max: prop.max,
       min: prop.min,
     });
+    if (prop.name === 'val') {
+      console.log('[makeArrayProp] amount :', amount, prop);
+    }
     if (['string', 'number', 'boolean', 'Date'].includes(prop.type)) {
       return [...Array(amount).keys()].map(() =>
         this.makeProperty(
