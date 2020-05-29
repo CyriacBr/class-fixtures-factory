@@ -23,6 +23,10 @@ import {
   ArrayMinSize,
   ArrayMaxSize,
   IsNegative,
+  IsString,
+  IsNumber,
+  IsNumberString,
+  IsDate,
 } from 'class-validator';
 
 describe(`FixtureFactory`, () => {
@@ -568,6 +572,50 @@ describe(`FixtureFactory`, () => {
       const dummy = factory.make(Dummy).one();
       console.log('[ArrayMaxSize] dummy :', dummy);
       expect(dummy.val.length <= 2).toBe(true);
+    });
+
+    it(`@IsString()`, () => {
+      class Dummy {
+        @IsString()
+        val!: string;
+      }
+      factory.register([Dummy]);
+
+      const dummy = factory.make(Dummy).one();
+      expect(typeof dummy.val).toBe('string');
+    });
+
+    it(`@IsNumber()`, () => {
+      class Dummy {
+        @IsNumber()
+        val!: number;
+      }
+      factory.register([Dummy]);
+
+      const dummy = factory.make(Dummy).one();
+      expect(typeof dummy.val).toBe('number');
+    });
+
+    it(`@IsNumberString()`, () => {
+      class Dummy {
+        @IsNumberString()
+        val!: number;
+      }
+      factory.register([Dummy]);
+
+      const dummy = factory.make(Dummy).one();
+      expect(typeof dummy.val).toBe('number');
+    });
+
+    it(`@IsDate()`, () => {
+      class Dummy {
+        @IsDate()
+        val!: Date;
+      }
+      factory.register([Dummy]);
+
+      const dummy = factory.make(Dummy).one();
+      expect(dummy.val).toBeInstanceOf(Date);
     });
   });
 });
