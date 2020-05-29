@@ -2,13 +2,13 @@
 
 # class-fixtures-factory <!-- omit in toc -->
 
-This lightweight lib is a class factory to generate fixtures on the fly. However, contarly to most (or rather all)
+This lightweight lib is a class factory to generate fixtures on the fly. However, contrarily to most (or rather all)
 libs out there, `class-fixtures-factory` generate fixtures from classes. This is handy when you already have
 classes as your source of truth and do not want to write custom schema to generate fixtures.  
 Also, because the lib is based on emitted TypeScript's metadata, if you heavily
 use decorators in your classes (when working with `class-validator`, `type-graphql`, for example), the setup will be even easier.
 
-If you aren't familiar about what fixtures are, they are simply randomnly generated data and are often used for database
+If you aren't familiar about what fixtures are, they are simply randomly generated data and are often used for database
 seeding or for testing.
 
 - [Features](#features)
@@ -24,7 +24,7 @@ seeding or for testing.
 - Leverage `faker.js` for generating random values
 - Support relationships between classes
 - Customizable
-- Supporte `class-validator` decorators
+- Support `class-validator` decorators. (`type-graphql` to come at a latter date)
 
 ## Usage
 
@@ -33,8 +33,8 @@ seeding or for testing.
 Because `class-fixtures-factory` relies on metadata, you'll have to:
 
 1. Register all the classes you're going to use
-2. Annoate properties with decorators
-   Besides the decorators shiped with the lib, you can also use `class-validator` decorators.
+2. Annotate properties with decorators
+   Besides the decorators shipped with the lib, you can also use `class-validator` decorators.
 
 ```ts
 import { FixtureFactory } from 'class-fixtures-factory';
