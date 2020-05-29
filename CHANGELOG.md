@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.0](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.3.0...v1.4.0) (2020-05-29)
+
+
+### Features
+
+* **class-validator:** support type validator decorators ([ca97eae](https://github.com/CyriacBr/class-fixtures-factory/commit/ca97eae1533dd64e36e6cb4db8fe7a73647dbf92))
+
 ## [1.3.0](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.2.1...v1.3.0) (2020-03-23)
 
 

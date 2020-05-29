@@ -15,6 +15,7 @@ seeding or for testing.
 - [Usage](#usage)
   - [General](#general)
   - [Customization](#customization)
+  - [Factory Options](#factory-options)
     - [Assigner](#assigner)
   - [API](#api)
 
@@ -117,6 +118,22 @@ export class Author extends BaseEntity {
   address: Address;
 }
 ```
+
+### Factory Options
+
+You can pass an `options` object to the `FixtureFactory` constructor:
+
+```ts
+import { FixtureFactory } from 'class-fixtures-factory';
+
+const factory = new FixtureFactory({ /* options */});
+```
+
+The `options` parameter can take:
+* `debug` (boolean)
+  Whether to print generated objects or no.
+  ![](debug.png)
+
 
 #### Assigner
 

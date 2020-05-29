@@ -37,13 +37,34 @@ export class ClassValidatorAdapter {
     };
 
     switch (cvMeta.type) {
+      case 'isBoolean': {
+        return {
+          ...prop,
+          type: prop.type || 'boolean',
+          input: () => faker.random.boolean(),
+        } as PropertyMetadata;
+      }
+      case 'isDate': {
+        data.type = 'date';
+        break;
+      }
+      case 'isString': {
+        data.type = 'alpha';
+        break;
+      }
+      case 'isNumber':
+      case 'isInt':
+      case 'isNumberString': {
+        data.type = 'number';
+        break;
+      }
       case 'isIn': {
         const items = cvMeta.constraints[0];
         return {
           ...prop,
           type: prop.type || 'any',
           input: () => faker.random.arrayElement(items),
-        };
+        } as PropertyMetadata;
       }
       case 'equals':
         return {
