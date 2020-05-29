@@ -7,19 +7,43 @@ import { Class } from '../common/typings';
 import reflect, { PropertyReflection } from 'tinspector';
 import { FixtureOptions } from '../decorators/Fixture';
 import { getEnumValues } from '../common/utils';
+import { ClassValidatorAdapter } from './ClassValidatorAdapter';
 
 export class DefaultMetadataStore extends BaseMetadataStore {
+  private cvAdapter = new ClassValidatorAdapter();
+
+  constructor(private readonly acceptPartialResult = false) {
+    super();
+  }
   /**
    * Make type metadata for a class
    * @param classType
    */
   make(classType: Class): ClassMetadata {
-    const metadata = reflect(classType);
+    const rMetadata = reflect(classType);
+    const cvMetadata = this.cvAdapter.extractMedatada(classType);
+
+    let properties = rMetadata.properties
+      .map(prop => this.makePropertyMetadata(prop)!)
+      .filter(Boolean);
+    for (const cvMeta of cvMetadata) {
+      let existing = properties.find(prop => prop.name === cvMeta.propertyName);
+      const deduced = this.cvAdapter.makePropertyMetadata(
+        cvMeta,
+        existing
+      ) as PropertyMetadata;
+      if (existing) {
+        properties = properties.map(prop =>
+          prop.name === cvMeta.propertyName ? deduced : existing!
+        );
+      } else {
+        properties.push(deduced);
+      }
+    }
+
     const classMetadata: ClassMetadata = {
-      name: metadata.name,
-      properties: metadata.properties
-        .map(prop => this.makePropertyMetadata(prop)!)
-        .filter(Boolean),
+      name: rMetadata.name,
+      properties: properties.filter(Boolean),
     };
     return (this.store[classType.name] = classMetadata);
   }
@@ -40,13 +64,13 @@ export class DefaultMetadataStore extends BaseMetadataStore {
       } else if (typeof decorator === 'object') {
         if (decorator.ignore) return null;
         meta.input = decorator.get;
+        meta.min = decorator.min || 1;
+        meta.max = decorator.max || 3;
         let inputType: any = decorator.type?.();
         if (inputType) {
           if (Array.isArray(inputType)) {
             inputType = inputType[0];
             meta.array = true;
-            meta.min = decorator.min || 1;
-            meta.max = decorator.max || 3;
           }
           if (!inputType.prototype) {
             throw new Error(
@@ -67,10 +91,13 @@ export class DefaultMetadataStore extends BaseMetadataStore {
       }
     }
     if (!meta.type) {
-      if (!prop.type) return null;
-      else if (Array.isArray(prop.type)) {
+      if (!prop.type) {
+        if (this.acceptPartialResult) {
+          return meta as PropertyMetadata;
+        }
+      } else if (Array.isArray(prop.type)) {
         throw new Error(
-          `The type of "${meta.name}" seems to be an array. Use Use @Fixture({ type: () => Foo })`
+          `The type of "${meta.name}" seems to be an array. Use @Fixture({ type: () => Foo })`
         );
       } else if (prop.type instanceof Function) {
         const { name } = prop.type as Function;

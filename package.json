@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1",
+  "version": "1.3.0",
   "name": "class-fixtures-factory",
   "author": "CyriacBr",
   "license": "MIT",
@@ -44,10 +44,10 @@
     "@microsoft/api-documenter": "^7.7.14",
     "@microsoft/api-extractor": "^7.7.10",
     "@types/jest": "^25.1.4",
-    "@types/treeify": "^1.0.0",
     "@typescript-eslint/eslint-plugin": "^2.16.0",
     "@typescript-eslint/parser": "^2.16.0",
     "chalk": "^3.0.0",
+    "class-validator": "^0.11.1",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.9.0",
     "eslint-plugin-import": "^2.20.0",
@@ -55,13 +55,20 @@
     "eslint-plugin-jest-formatting": "^1.2.0",
     "eslint-plugin-prettier": "^3.1.2",
     "husky": "^4.2.3",
+    "jest-tap-reporter": "^1.9.0",
     "lint-staged": "^10.0.8",
     "pkg-ok": "^2.3.1",
     "prettier": "^1.19.1",
     "standard-version": "7.1.0",
-    "treeify": "^1.1.0",
     "tslib": "^1.11.1",
     "typescript": "^3.8.3"
+  },
+  "dependencies": {
+    "@types/faker": "^4.1.10",
+    "@types/treeify": "^1.0.0",
+    "faker": "^4.1.0",
+    "tinspector": "^2.3.1",
+    "treeify": "^1.1.0"
   },
   "husky": {
     "hooks": {
@@ -119,10 +126,5 @@
     "semi": true,
     "singleQuote": true,
     "trailingComma": "es5"
-  },
-  "dependencies": {
-    "@types/faker": "^4.1.10",
-    "faker": "^4.1.0",
-    "tinspector": "^2.3.1"
   }
 }

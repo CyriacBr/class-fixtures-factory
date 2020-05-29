@@ -178,7 +178,7 @@ describe('Metadata Store', () => {
         surnames!: string[];
       }
       expect(() => store.make(Author)).toThrow(
-        'The type of "surnames" seems to be an array. Use Use @Fixture({ type: () => Foo })'
+        'The type of "surnames" seems to be an array. Use @Fixture({ type: () => Foo })'
       );
     });
 

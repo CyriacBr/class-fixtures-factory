@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.2.1...v1.3.0) (2020-03-23)
+
+
+### Features
+
+* **metadata:** supports class-validator decorators ([41ac81c](https://github.com/CyriacBr/class-fixtures-factory/commit/41ac81cf8cca472c6f506f89f83c6a67da6f68fb))
+
+### [1.2.1](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.2.0...v1.2.1) (2020-03-20)
+
+
+### Bug Fixes
+
+* **metadata:** can return partial results ([8a7c555](https://github.com/CyriacBr/class-fixtures-factory/commit/8a7c55504b323a7394b9ac721dcd3eee764487e7))
+
+## [1.2.0](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.1.0...v1.2.0) (2020-03-20)
+
+
+### Features
+
+* **factory:** added assigner ([3c9c3c1](https://github.com/CyriacBr/class-fixtures-factory/commit/3c9c3c1768b55a7f3bd8a674daab5d8fb04ecdbb))
+
+## [1.1.0](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.0.2...v1.1.0) (2020-03-19)
+
+
+### Features
+
+* **factory:** improved logger ([753c286](https://github.com/CyriacBr/class-fixtures-factory/commit/753c28650c3bc7bebd35b86a8c45a5b2925f5a8a))
+
+### [1.0.2](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.0.1...v1.0.2) (2020-03-19)
+
+
+### Bug Fixes
+
+* moved treeify to deps ([778f644](https://github.com/CyriacBr/class-fixtures-factory/commit/778f644c9eff642114fde2a329b880d27b18cfa0))
+
 ### [1.0.1](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.0.0...v1.0.1) (2020-03-19)
 
 
