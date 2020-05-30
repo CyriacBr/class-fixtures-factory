@@ -25,7 +25,8 @@ seeding or for testing.
 - Leverage `faker.js` for generating random values
 - Support relationships between classes
 - Customizable
-- Support `class-validator` decorators. (`type-graphql` to come at a latter date)
+- Support `class-validator@0.11.x` decorators. (`type-graphql` to come at a latter date)  
+  **Version 0.12.x is broken and doesn't store the decorator names, so it's impossible for this lib to work alongside.**
 
 ## Usage
 
