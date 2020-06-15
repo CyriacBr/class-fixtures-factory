@@ -252,9 +252,6 @@ export class FixtureFactory {
       max: prop.max,
       min: prop.min,
     });
-    if (prop.name === 'val') {
-      console.log('[makeArrayProp] amount :', amount, prop);
-    }
     if (['string', 'number', 'boolean', 'Date'].includes(prop.type)) {
       return [...Array(amount).keys()].map(() =>
         this.makeProperty(
