@@ -108,9 +108,6 @@ export class Author extends BaseEntity {
   @Fixture(() => 24)
   age: number;
 
-  @Enum()
-  mood: Mood;
-
   @Fixture({ type: () => [Book] }, { min: 3, max: 5 })
   books: Book[];
 
