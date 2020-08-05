@@ -61,7 +61,7 @@
     "lint-staged": "^10.0.8",
     "pkg-ok": "^2.3.1",
     "prettier": "^1.19.1",
-    "standard-version": "7.1.0",
+    "standard-version": "8.0.1",
     "tslib": "^1.11.1",
     "typescript": "^3.8.3"
   },
