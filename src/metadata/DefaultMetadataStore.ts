@@ -23,22 +23,43 @@ export class DefaultMetadataStore extends BaseMetadataStore {
     const rMetadata = reflect(classType);
     const cvMetadata = this.cvAdapter.extractMedatada(classType);
 
+    const unknownTypes = new Set<string>();
     let properties = rMetadata.properties
       .map(prop => this.makePropertyMetadata(prop)!)
       .filter(Boolean);
     for (const cvMeta of cvMetadata) {
-      let existing = properties.find(prop => prop.name === cvMeta.propertyName);
-      const deduced = this.cvAdapter.makePropertyMetadata(
+      const existingProp = properties.find(
+        prop => prop.name === cvMeta.propertyName
+      );
+      const deducedProp = this.cvAdapter.makePropertyMetadata(
         cvMeta,
-        existing
-      ) as PropertyMetadata;
-      if (existing) {
-        properties = properties.map(prop =>
-          prop.name === cvMeta.propertyName ? deduced : existing!
-        );
+        existingProp
+      ) as PropertyMetadata | null;
+      if (deducedProp) {
+        if (existingProp) {
+          properties = properties.map(prop =>
+            prop.name === cvMeta.propertyName ? deducedProp : existingProp
+          );
+        } else {
+          properties.push(deducedProp);
+        }
+        unknownTypes.delete(cvMeta.propertyName);
       } else {
-        properties.push(deduced);
+        const typeResolved = !!properties.find(
+          v => v.name === cvMeta.propertyName && !!v.type
+        );
+        if (!typeResolved) {
+          unknownTypes.add(cvMeta.propertyName);
+        }
       }
+    }
+
+    if (unknownTypes.size > 0) {
+      throw new Error(
+        `Couldn't extract the type of ${[...unknownTypes]
+          .map(v => `"${v}"`)
+          .join(', ')}. Use @Fixture({ type: () => Foo })`
+      );
     }
 
     const classMetadata: ClassMetadata = {
