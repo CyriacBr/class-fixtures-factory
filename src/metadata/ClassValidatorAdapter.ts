@@ -25,7 +25,7 @@ export class ClassValidatorAdapter {
   makePropertyMetadata(
     cvMeta: ValidationMetadata,
     existingProp: PropertyMetadata | undefined
-  ): PropertyMetadata | Partial<PropertyMetadata> {
+  ): PropertyMetadata | Partial<PropertyMetadata> | null {
     const prop: Partial<PropertyMetadata> = {
       name: cvMeta.propertyName,
       ...(existingProp || {}),
@@ -304,9 +304,7 @@ export class ClassValidatorAdapter {
     }
 
     if (!prop.type) {
-      throw new Error(
-        `Couldn't extract the type of "${cvMeta.propertyName}". Use @Fixture({ type: () => Foo })`
-      );
+      return null;
     }
 
     return prop;

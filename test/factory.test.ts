@@ -27,6 +27,7 @@ import {
   IsNumber,
   IsNumberString,
   IsDate,
+  IsOptional,
 } from 'class-validator';
 
 describe(`FixtureFactory`, () => {
@@ -323,6 +324,16 @@ describe(`FixtureFactory`, () => {
   });
 
   describe(`with class-validator`, () => {
+    it(`throws if type can't be resolved`, () => {
+      class Dummy {
+        @IsOptional()
+        val!: string;
+      }
+      expect(() => factory.register([Dummy])).toThrow(
+        `Couldn't extract the type of "val". Use @Fixture({ type: () => Foo })`
+      );
+    });
+
     it(`@IsIn()`, () => {
       class Dummy {
         @IsIn(['a', 'b', 'c'])
@@ -616,6 +627,20 @@ describe(`FixtureFactory`, () => {
 
       const dummy = factory.make(Dummy).one();
       expect(dummy.val).toBeInstanceOf(Date);
+    });
+
+    describe(`Multiple decorators`, () => {
+      it(`@IsOptional() with resolved type`, () => {
+        class Dummy {
+          @IsString()
+          @IsOptional()
+          val!: string;
+        }
+        factory.register([Dummy]);
+
+        const dummy = factory.make(Dummy).one();
+        expect(typeof dummy.val).toBe('string');
+      });
     });
   });
 });
