@@ -31,6 +31,7 @@ export class DefaultMetadataStore extends BaseMetadataStore {
       const existingProp = properties.find(
         prop => prop.name === cvMeta.propertyName
       );
+      if (existingProp?.ignore || !!existingProp?.input) continue;
       const deducedProp = this.cvAdapter.makePropertyMetadata(
         cvMeta,
         existingProp
@@ -83,7 +84,13 @@ export class DefaultMetadataStore extends BaseMetadataStore {
       } else if (typeof decorator === 'string') {
         meta.input = () => decorator;
       } else if (typeof decorator === 'object') {
-        if (decorator.ignore) return null;
+        if (decorator.ignore) {
+          return {
+            ...meta,
+            type: '',
+            ignore: true,
+          } as PropertyMetadata;
+        }
         meta.input = decorator.get;
         meta.min = decorator.min || 1;
         meta.max = decorator.max || 3;

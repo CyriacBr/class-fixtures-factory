@@ -35,19 +35,20 @@ seeding or for testing.
 Because `class-fixtures-factory` relies on metadata, you'll have to:
 
 1. Register all the classes you're going to use
-2. Annotate properties with decorators
+2. Annotate properties with decorators.  
    Besides the decorators shipped with the lib, you can also use `class-validator` decorators.
 
 ```ts
 import { FixtureFactory } from 'class-fixtures-factory';
 
 const factory = new FixtureFactory();
+// these classes are annotated. See further below
 factory.register([Author, Address, Book]);
 
 // Generate a fixture
-let author = factory.make(Author).one();
+const author = factory.make(Author).one();
 // Generate multiple fixtures
-let authors = factory.make(Author).many(10);
+const authors = factory.make(Author).many(10);
 
 // Ignore some properties at runtime
 const partialAuthor = factory
@@ -94,7 +95,8 @@ class Author {
 }
 ```
 
-Futhermore, `Fixture` can be used for further customization, using [faker.js](https://github.com/marak/Faker.js/#api), as stated:
+Futhermore, `Fixture` can be used for further customization, using [faker.js](https://github.com/marak/Faker.js/#api), as stated.  
+**Note however that using `Fixture` will override other decorators from `class-validator`**.
 
 ```ts
 export class Author extends BaseEntity {
@@ -117,6 +119,16 @@ export class Author extends BaseEntity {
   // same as not using @Fixture at all
   @Fixture({ ignore: true })
   address: Address;
+
+  // when generated, will always be 500
+  @IsNumber()
+  @Fixture(() => 500)
+  superAge: number;
+
+  // is ignored
+  @IsString()
+  @Fixture({ ignore: true })
+  hiddenName: string;
 }
 ```
 

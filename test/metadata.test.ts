@@ -48,6 +48,8 @@ describe('Metadata Store', () => {
       city!: string;
       @Fixture(() => ({ petName: 'foo' }))
       pet!: any;
+      @Fixture({ ignore: true })
+      foo!: string;
     }
     class Book {
       author!: Author;
@@ -85,6 +87,12 @@ describe('Metadata Store', () => {
 
       expect(fullNameProp?.input).toBeDefined();
       expect(typeof fullNameProp?.input?.()).toBe('string');
+    });
+
+    it(`@Fixture({ ignore: true })`, () => {
+      const fooProp = metadata.properties.find(p => p.name === 'foo');
+
+      expect(fooProp?.ignore).toBe(true);
     });
 
     it(`string`, () => {

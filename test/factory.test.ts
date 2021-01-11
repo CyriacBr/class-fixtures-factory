@@ -334,6 +334,30 @@ describe(`FixtureFactory`, () => {
       );
     });
 
+    it(`@Fixture({ ignore: true }) takes precedence`, () => {
+      class Dummy {
+        @IsString()
+        @Fixture({ ignore: true })
+        val!: string;
+      }
+      factory.register([Dummy]);
+
+      const dummy = factory.make(Dummy).one();
+      expect(dummy.val).toBeUndefined();
+    });
+
+    it(`@Fixture(() => any) takes precedence`, () => {
+      class Dummy {
+        @IsString()
+        @Fixture(() => 'foo')
+        val!: string;
+      }
+      factory.register([Dummy]);
+
+      const dummy = factory.make(Dummy).one();
+      expect(dummy.val).toBe('foo');
+    });
+
     it(`@IsIn()`, () => {
       class Dummy {
         @IsIn(['a', 'b', 'c'])
