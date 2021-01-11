@@ -1,4 +1,4 @@
-import { decorateProperty } from 'tinspector';
+import { decorate } from 'tinspector';
 
 export type FixtureOptions =
   | string
@@ -19,7 +19,7 @@ export type FixtureOptions =
  * @param options
  */
 export function Fixture(options?: FixtureOptions) {
-  return decorateProperty({
+  return decorate({
     type: 'Fixture',
     value: options,
   });
