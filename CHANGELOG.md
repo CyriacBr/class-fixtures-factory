@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.5.1](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.5.0...v1.5.1) (2021-01-11)
+
+
+### Bug Fixes
+
+* correct faker type inside @Fixture. Closes [#10](https://github.com/CyriacBr/class-fixtures-factory/issues/10) ([12f0911](https://github.com/CyriacBr/class-fixtures-factory/commit/12f0911e1d4709f88755551f405b304926e4b476))
+* solve incompatibility between babel and tinspector. Closes [#12](https://github.com/CyriacBr/class-fixtures-factory/issues/12) ([bccb357](https://github.com/CyriacBr/class-fixtures-factory/commit/bccb357a96e14b142ce762cf9adfc160ad6640f6))
+* using @Fixture takes precedence over class-validator ([f938f4b](https://github.com/CyriacBr/class-fixtures-factory/commit/f938f4bbb7002c2b14af0b0a7a85ba80aeedd307))
+
 ## [1.5.0](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.4.2...v1.5.0) (2021-01-11)
 
 
