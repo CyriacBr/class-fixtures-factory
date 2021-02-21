@@ -8,7 +8,6 @@ import { Class } from './common/typings';
 import faker from 'faker';
 import chalk from 'chalk';
 import { FactoryLogger } from './FactoryLogger';
-//import { ClassValidatorAdapter } from './ClassValidatorAdapter';
 
 export interface FactoryOptions {
   logging?: boolean;
@@ -47,7 +46,6 @@ export class FixtureFactory {
   private depthness: string[] = [];
   private loggers: FactoryLogger[] = [];
   private assigner: Assigner = this.defaultAssigner.bind(this);
-  //private cvAdapter = new ClassValidatorAdapter();
 
   constructor(options?: FactoryOptions) {
     this.store = new DefaultMetadataStore();
