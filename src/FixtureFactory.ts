@@ -242,7 +242,7 @@ export class FixtureFactory {
       default:
         break;
     }
-    throw new Error(`Can't generate a value for this scalar`);
+    throw new Error(`Can't generate a value for this scalar: ${prop.type}`);
   }
 
   private makeArrayProp(prop: PropertyMetadata, meta: ClassMetadata) {
