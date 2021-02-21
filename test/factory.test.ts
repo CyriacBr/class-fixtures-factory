@@ -132,6 +132,17 @@ describe(`FixtureFactory`, () => {
       expect(person.obj).toMatchObject({ foo: 'bar' });
     });
 
+    it(`@Fixture({ type })`, () => {
+      class Person {
+        @Fixture({ type: () => Number })
+        value!: 'a' | 'b' | 'c';
+      }
+      factory.register([Person]);
+
+      const person = factory.make(Person).one();
+      expect(typeof person.value).toBe('number');
+    });
+
     it(`string`, () => {
       class Person {
         @Fixture()
