@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.6.1](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.6.0...v1.6.1) (2021-02-21)
+
+
+### Bug Fixes
+
+* correct fromDecorator flag ([0e7da1a](https://github.com/CyriacBr/class-fixtures-factory/commit/0e7da1ae631ba21c9e9d7b5f3e0f0c89947a6b5d))
+
 ## [1.6.0](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.5.1...v1.6.0) (2021-02-21)
 
 
