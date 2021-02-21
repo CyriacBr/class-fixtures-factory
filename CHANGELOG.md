@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.6.0](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.5.1...v1.6.0) (2021-02-21)
+
+
+### Features
+
+* **internal:** flag prop metadata when a decorator is used ([e825278](https://github.com/CyriacBr/class-fixtures-factory/commit/e825278e6a78c30ce3ba7070f74ef3f361758087))
+
+
+### Bug Fixes
+
+* improve error message when scalar can't be generated ([3d07618](https://github.com/CyriacBr/class-fixtures-factory/commit/3d0761815a9978c7926ddc5309c7eb63c2864254))
+* mark prop metadata as scalar when user provides scalar type ([7eb1c83](https://github.com/CyriacBr/class-fixtures-factory/commit/7eb1c8359d42d01055a56e4b67b0ccf49e7c7c60))
+
 ### [1.5.1](https://github.com/CyriacBr/class-fixtures-factory/compare/v1.5.0...v1.5.1) (2021-01-11)
 
 
