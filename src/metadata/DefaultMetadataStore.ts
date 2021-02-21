@@ -111,6 +111,7 @@ export class DefaultMetadataStore extends BaseMetadataStore {
             meta.type = name;
           } else {
             meta.type = name.toLowerCase();
+            meta.scalar = !meta.array;
           }
         }
         if (decorator.enum) {
