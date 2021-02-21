@@ -79,7 +79,6 @@ export class DefaultMetadataStore extends BaseMetadataStore {
       scalar: prop.typeClassification === 'Primitive',
     };
     if (decorator) {
-      meta.fromDecorator = true;
       if (typeof decorator === 'function') {
         meta.input = decorator.bind(decorator, require('faker'));
       } else if (typeof decorator === 'string') {
@@ -97,6 +96,7 @@ export class DefaultMetadataStore extends BaseMetadataStore {
         meta.max = decorator.max || 3;
         let inputType: any = decorator.type?.();
         if (inputType) {
+          meta.typeFromDecorator = true;
           if (Array.isArray(inputType)) {
             inputType = inputType[0];
             meta.array = true;
