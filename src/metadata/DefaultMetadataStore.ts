@@ -79,6 +79,7 @@ export class DefaultMetadataStore extends BaseMetadataStore {
       scalar: prop.typeClassification === 'Primitive',
     };
     if (decorator) {
+      meta.fromDecorator = true;
       if (typeof decorator === 'function') {
         meta.input = decorator.bind(decorator, require('faker'));
       } else if (typeof decorator === 'string') {

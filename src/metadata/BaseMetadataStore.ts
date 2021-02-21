@@ -16,6 +16,7 @@ export interface PropertyMetadata {
   min?: number;
   max?: number;
   input?: (...args: any[]) => any;
+  fromDecorator?: boolean;
 }
 
 export abstract class BaseMetadataStore {
