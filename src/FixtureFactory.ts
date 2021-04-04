@@ -157,7 +157,7 @@ export class FixtureFactory {
           }
         } catch (err) {
           this.log(
-            chalk.red(`An error occured while generating "${meta.name}"`),
+            chalk.red(`An error occurred while generating "${meta.name}"`),
             true
           );
           console.error(err);
