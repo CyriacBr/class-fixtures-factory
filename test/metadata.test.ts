@@ -1,9 +1,6 @@
-import { DefaultMetadataStore } from '../src/metadata/DefaultMetadataStore';
+import { MetadataStore } from '../src/metadata/MetadataStore';
 import { Fixture } from '../src/decorators/Fixture';
-import {
-  ClassMetadata,
-  PropertyMetadata,
-} from '../src/metadata/BaseMetadataStore';
+import { ClassMetadata, PropertyMetadata } from '../src/metadata/MetadataStore';
 
 enum Mood {
   HAPPY,
@@ -14,7 +11,7 @@ enum PetPreference {
   DOG = 'DOG',
   CAT = 'CAT',
 }
-const store = new DefaultMetadataStore();
+const store = new MetadataStore();
 
 describe('Metadata Store', () => {
   describe(`metadata extraction`, () => {

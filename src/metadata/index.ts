@@ -1,2 +1,2 @@
-export * from './BaseMetadataStore';
-export * from './DefaultMetadataStore';
+export * from './BaseMetadataAdapter';
+export * from './MetadataStore';

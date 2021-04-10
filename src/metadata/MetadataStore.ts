@@ -1,56 +1,94 @@
-import {
-  BaseMetadataStore,
-  ClassMetadata,
-  PropertyMetadata,
-} from './BaseMetadataStore';
 import { Class } from '../common/typings';
 import reflect, { PropertyReflection } from 'tinspector';
 import { FixtureOptions } from '../decorators/Fixture';
 import { getEnumValues } from '../common/utils';
-import { ClassValidatorAdapter } from './ClassValidatorAdapter';
+import { BaseMetadataAdapter } from './BaseMetadataAdapter';
 
-export class DefaultMetadataStore extends BaseMetadataStore {
-  private cvAdapter = new ClassValidatorAdapter();
+export interface ClassMetadata {
+  name: string;
+  properties: PropertyMetadata[];
+}
 
-  constructor(private readonly acceptPartialResult = false) {
-    super();
+export interface PropertyMetadata {
+  name: string;
+  type: string;
+  scalar?: boolean;
+  enum?: boolean;
+  items?: any[];
+  array?: boolean;
+  ignore?: boolean;
+  min?: number;
+  max?: number;
+  input?: (...args: any[]) => any;
+  typeFromDecorator?: boolean;
+}
+
+export class MetadataStore {
+  private static adapter: BaseMetadataAdapter;
+  protected store: Record<string, ClassMetadata> = {};
+
+  constructor(private readonly acceptPartialResult = false) {}
+
+  static setAdapter(adapter: BaseMetadataAdapter) {
+    MetadataStore.adapter = adapter;
   }
+
+  /**
+   * Retrieve the metadata of a given class from the store
+   */
+  get(classType: Class | string): ClassMetadata {
+    const name = typeof classType === 'string' ? classType : classType.name;
+    const value = this.store[name];
+    if (!value) throw new Error(`Cannot find metadata for class "${name}"`);
+    return value;
+  }
+
   /**
    * Make type metadata for a class
-   * @param classType
    */
   make(classType: Class): ClassMetadata {
-    const rMetadata = reflect(classType);
-    const cvMetadata = this.cvAdapter.extractMedatada(classType);
+    const reflectMetadata = reflect(classType);
+    const adapterMetadata = MetadataStore.adapter
+      ? MetadataStore.adapter.makeOwnMetadata(classType)
+      : [];
 
     const unknownTypes = new Set<string>();
-    let properties = rMetadata.properties
+    /**
+     * First, get properties to generate from reflection
+     */
+    let properties = reflectMetadata.properties
       .map(prop => this.makePropertyMetadata(prop)!)
       .filter(Boolean);
-    for (const cvMeta of cvMetadata) {
-      const existingProp = properties.find(
-        prop => prop.name === cvMeta.propertyName
+
+    /**
+     * Merge with the properties made from the adapter
+     * Basically the property from the adapter takes precedence unless
+     * the Fixture decorator is used to ignore the property or a force a given value
+     */
+    for (const adapterMeta of adapterMetadata) {
+      const defaultProp = properties.find(
+        prop => prop.name === adapterMeta.propertyName
       );
-      if (existingProp?.ignore || !!existingProp?.input) continue;
-      const deducedProp = this.cvAdapter.makePropertyMetadata(
-        cvMeta,
-        existingProp
-      ) as PropertyMetadata | null;
+      if (defaultProp?.ignore || !!defaultProp?.input) continue;
+      const deducedProp = MetadataStore.adapter?.deduceMetadata?.(
+        defaultProp,
+        adapterMeta
+      );
       if (deducedProp) {
-        if (existingProp) {
+        if (defaultProp) {
           properties = properties.map(prop =>
-            prop.name === cvMeta.propertyName ? deducedProp : existingProp
+            prop.name === adapterMeta.propertyName ? deducedProp : defaultProp
           );
         } else {
           properties.push(deducedProp);
         }
-        unknownTypes.delete(cvMeta.propertyName);
+        unknownTypes.delete(adapterMeta.propertyName);
       } else {
         const typeResolved = !!properties.find(
-          v => v.name === cvMeta.propertyName && !!v.type
+          v => v.name === adapterMeta.propertyName && !!v.type
         );
         if (!typeResolved) {
-          unknownTypes.add(cvMeta.propertyName);
+          unknownTypes.add(adapterMeta.propertyName);
         }
       }
     }
@@ -64,7 +102,7 @@ export class DefaultMetadataStore extends BaseMetadataStore {
     }
 
     const classMetadata: ClassMetadata = {
-      name: rMetadata.name,
+      name: reflectMetadata.name,
       properties: properties.filter(Boolean),
     };
     return (this.store[classType.name] = classMetadata);

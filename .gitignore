@@ -2,5 +2,5 @@
 .DS_Store
 node_modules
 dist
-plugins
+/plugins
 test/playground.ts

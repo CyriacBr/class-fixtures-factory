@@ -1,9 +1,4 @@
-import {
-  BaseMetadataStore,
-  DefaultMetadataStore,
-  ClassMetadata,
-  PropertyMetadata,
-} from './metadata';
+import { MetadataStore, ClassMetadata, PropertyMetadata } from './metadata';
 import { Class } from './common/typings';
 import faker from 'faker';
 import chalk from 'chalk';
@@ -36,7 +31,7 @@ export type Assigner = (
 ) => void;
 
 export class FixtureFactory {
-  private store: BaseMetadataStore;
+  private store = new MetadataStore();
   private classTypes: Record<string, Class> = {};
   private DEFAULT_OPTIONS: FactoryOptions = {
     logging: false,
@@ -48,7 +43,6 @@ export class FixtureFactory {
   private assigner: Assigner = this.defaultAssigner.bind(this);
 
   constructor(options?: FactoryOptions) {
-    this.store = new DefaultMetadataStore();
     this.options = {
       ...this.DEFAULT_OPTIONS,
       ...(options || {}),
@@ -66,16 +60,6 @@ export class FixtureFactory {
    */
   setAssigner(fn: Assigner) {
     this.assigner = fn;
-  }
-
-  /**
-   * You can set a custom metadata store
-   * for extension purposes.
-   * The store should extends `BaseMetadataStore`
-   * @param store
-   */
-  setMetadataStore(store: BaseMetadataStore) {
-    this.store = store;
   }
 
   /**
