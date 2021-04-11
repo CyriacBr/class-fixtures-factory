@@ -74,10 +74,10 @@ export class MetadataStore {
         defaultProp,
         adapterMeta
       );
-      if (deducedProp) {
+      if (deducedProp && deducedProp.type) {
         if (defaultProp) {
           properties = properties.map(prop =>
-            prop.name === adapterMeta.propertyName ? deducedProp : defaultProp
+            prop.name === adapterMeta.propertyName ? deducedProp : prop
           );
         } else {
           properties.push(deducedProp);
