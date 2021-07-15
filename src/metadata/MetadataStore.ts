@@ -19,7 +19,14 @@ export interface PropertyMetadata {
   ignore?: boolean;
   min?: number;
   max?: number;
+  /**
+   * A value that completely bypass everything and sets the generate value equals to its own
+   */
   input?: (...args: any[]) => any;
+  /**
+   * An input provided by the internals or a provider to generate scalars
+   */
+  libraryInput?: (...args: any[]) => any;
   typeFromDecorator?: boolean;
 }
 
@@ -59,6 +66,13 @@ export class MetadataStore {
     let properties = reflectMetadata.properties
       .map(prop => this.makePropertyMetadata(prop)!)
       .filter(Boolean);
+
+    for (const reflectProp of properties) {
+      if (reflectProp?.ignore || !!reflectProp?.input) continue;
+      if (!reflectProp.type) {
+        unknownTypes.add(reflectProp.name);
+      }
+    }
 
     /**
      * Merge with the properties made from the adapter
@@ -131,7 +145,7 @@ export class MetadataStore {
         }
         meta.input = decorator.get;
         meta.min = decorator.min || 1;
-        meta.max = decorator.max || 3;
+        meta.max = Math.max(decorator.max || 3, meta.min);
         let inputType: any = decorator.type?.();
         if (inputType) {
           meta.typeFromDecorator = true;
@@ -164,9 +178,7 @@ export class MetadataStore {
           return meta as PropertyMetadata;
         }
       } else if (Array.isArray(prop.type)) {
-        throw new Error(
-          `The type of "${meta.name}" seems to be an array. Use @Fixture({ type: () => Foo })`
-        );
+        return meta as any;
       } else if (prop.type instanceof Function) {
         const { name } = prop.type as Function;
         if (!['string', 'number', 'boolean'].includes(name.toLowerCase())) {
@@ -175,11 +187,6 @@ export class MetadataStore {
           meta.type = name.toLowerCase();
         }
       }
-    }
-    if (!meta.type) {
-      throw new Error(
-        `Couldn't extract the type of "${meta.name}". Use @Fixture({ type: () => Foo })`
-      );
     }
     return meta as PropertyMetadata;
   }

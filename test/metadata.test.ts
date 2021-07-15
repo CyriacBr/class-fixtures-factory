@@ -183,7 +183,7 @@ describe('Metadata Store', () => {
         surnames!: string[];
       }
       expect(() => store.make(Author)).toThrow(
-        'The type of "surnames" seems to be an array. Use @Fixture({ type: () => Foo })'
+        `Couldn't extract the type of "surnames". Use @Fixture({ type: () => Foo })`
       );
     });
 

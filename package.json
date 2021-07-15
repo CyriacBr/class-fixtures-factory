@@ -55,14 +55,17 @@
     "eslint-plugin-jest": "^23.6.0",
     "eslint-plugin-jest-formatting": "^1.2.0",
     "eslint-plugin-prettier": "^3.1.2",
+    "graphql": "^15.5.0",
     "husky": "^4.2.3",
     "jest-tap-reporter": "^1.9.0",
     "lint-staged": "^10.0.8",
     "pkg-ok": "^2.3.1",
     "prettier": "^1.19.1",
+    "reflect-metadata": "^0.1.13",
     "standard-version": "7.1.0",
     "tsdx": "^0.14.1",
     "tslib": "^2.1.0",
+    "type-graphql": "^1.1.1",
     "typescript": "^3.8.3"
   },
   "dependencies": {
@@ -133,7 +136,8 @@
   "preconstruct": {
     "entrypoints": [
       "./index.ts",
-      "./plugins/class-validator/index.ts"
+      "./plugins/class-validator/index.ts",
+      "./plugins/type-graphql/index.ts"
     ]
   }
 }

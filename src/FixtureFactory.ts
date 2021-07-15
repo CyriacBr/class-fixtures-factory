@@ -198,12 +198,12 @@ export class FixtureFactory {
       this.logger().onCustomProp(prop);
       return prop.input();
     }
-    if (prop.scalar) {
-      const value = this.makeScalarProperty(prop);
+    if (prop.array) {
+      return this.makeArrayProp(prop, meta);
+    } else if (prop.scalar) {
+      const value = prop.libraryInput?.() || this.makeScalarProperty(prop);
       this.logger().onNormalProp(prop, value);
       return value;
-    } else if (prop.array) {
-      return this.makeArrayProp(prop, meta);
     }
     return this.makeObjectProp(meta, prop);
   }
@@ -231,26 +231,16 @@ export class FixtureFactory {
 
   private makeArrayProp(prop: PropertyMetadata, meta: ClassMetadata) {
     const amount = faker.random.number({
-      max: prop.max,
-      min: prop.min,
+      max: prop.max ?? 3,
+      min: prop.min ?? 1,
     });
-    if (['string', 'number', 'boolean', 'Date'].includes(prop.type)) {
-      return [...Array(amount).keys()].map(() =>
-        this.makeProperty(
-          {
-            ...prop,
-            array: false,
-            scalar: true,
-          },
-          meta
-        )
-      );
-    }
+    const scalar = ['string', 'number', 'boolean', 'Date'].includes(prop.type);
     return [...Array(amount).keys()].map(() =>
       this.makeProperty(
         {
           ...prop,
           array: false,
+          scalar,
         },
         meta
       )
