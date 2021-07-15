@@ -1,56 +1,108 @@
-import {
-  BaseMetadataStore,
-  ClassMetadata,
-  PropertyMetadata,
-} from './BaseMetadataStore';
 import { Class } from '../common/typings';
 import reflect, { PropertyReflection } from 'tinspector';
 import { FixtureOptions } from '../decorators/Fixture';
 import { getEnumValues } from '../common/utils';
-import { ClassValidatorAdapter } from './ClassValidatorAdapter';
+import { BaseMetadataAdapter } from './BaseMetadataAdapter';
 
-export class DefaultMetadataStore extends BaseMetadataStore {
-  private cvAdapter = new ClassValidatorAdapter();
+export interface ClassMetadata {
+  name: string;
+  properties: PropertyMetadata[];
+}
 
-  constructor(private readonly acceptPartialResult = false) {
-    super();
+export interface PropertyMetadata {
+  name: string;
+  type: string;
+  scalar?: boolean;
+  enum?: boolean;
+  items?: any[];
+  array?: boolean;
+  ignore?: boolean;
+  min?: number;
+  max?: number;
+  /**
+   * A value that completely bypass everything and sets the generate value equals to its own
+   */
+  input?: (...args: any[]) => any;
+  /**
+   * An input provided by the internals or a provider to generate scalars
+   */
+  libraryInput?: (...args: any[]) => any;
+  typeFromDecorator?: boolean;
+}
+
+export class MetadataStore {
+  private static adapter: BaseMetadataAdapter;
+  protected store: Record<string, ClassMetadata> = {};
+
+  constructor(private readonly acceptPartialResult = false) {}
+
+  static setAdapter(adapter: BaseMetadataAdapter) {
+    MetadataStore.adapter = adapter;
   }
+
+  /**
+   * Retrieve the metadata of a given class from the store
+   */
+  get(classType: Class | string): ClassMetadata {
+    const name = typeof classType === 'string' ? classType : classType.name;
+    const value = this.store[name];
+    if (!value) throw new Error(`Cannot find metadata for class "${name}"`);
+    return value;
+  }
+
   /**
    * Make type metadata for a class
-   * @param classType
    */
   make(classType: Class): ClassMetadata {
-    const rMetadata = reflect(classType);
-    const cvMetadata = this.cvAdapter.extractMedatada(classType);
+    const reflectMetadata = reflect(classType);
+    const adapterMetadata = MetadataStore.adapter
+      ? MetadataStore.adapter.makeOwnMetadata(classType)
+      : [];
 
     const unknownTypes = new Set<string>();
-    let properties = rMetadata.properties
+    /**
+     * First, get properties to generate from reflection
+     */
+    let properties = reflectMetadata.properties
       .map(prop => this.makePropertyMetadata(prop)!)
       .filter(Boolean);
-    for (const cvMeta of cvMetadata) {
-      const existingProp = properties.find(
-        prop => prop.name === cvMeta.propertyName
+
+    for (const reflectProp of properties) {
+      if (reflectProp?.ignore || !!reflectProp?.input) continue;
+      if (!reflectProp.type) {
+        unknownTypes.add(reflectProp.name);
+      }
+    }
+
+    /**
+     * Merge with the properties made from the adapter
+     * Basically the property from the adapter takes precedence unless
+     * the Fixture decorator is used to ignore the property or a force a given value
+     */
+    for (const adapterMeta of adapterMetadata) {
+      const defaultProp = properties.find(
+        prop => prop.name === adapterMeta.propertyName
       );
-      if (existingProp?.ignore || !!existingProp?.input) continue;
-      const deducedProp = this.cvAdapter.makePropertyMetadata(
-        cvMeta,
-        existingProp
-      ) as PropertyMetadata | null;
-      if (deducedProp) {
-        if (existingProp) {
+      if (defaultProp?.ignore || !!defaultProp?.input) continue;
+      const deducedProp = MetadataStore.adapter?.deduceMetadata?.(
+        defaultProp,
+        adapterMeta
+      );
+      if (deducedProp && deducedProp.type) {
+        if (defaultProp) {
           properties = properties.map(prop =>
-            prop.name === cvMeta.propertyName ? deducedProp : existingProp
+            prop.name === adapterMeta.propertyName ? deducedProp : prop
           );
         } else {
           properties.push(deducedProp);
         }
-        unknownTypes.delete(cvMeta.propertyName);
+        unknownTypes.delete(adapterMeta.propertyName);
       } else {
         const typeResolved = !!properties.find(
-          v => v.name === cvMeta.propertyName && !!v.type
+          v => v.name === adapterMeta.propertyName && !!v.type
         );
         if (!typeResolved) {
-          unknownTypes.add(cvMeta.propertyName);
+          unknownTypes.add(adapterMeta.propertyName);
         }
       }
     }
@@ -64,7 +116,7 @@ export class DefaultMetadataStore extends BaseMetadataStore {
     }
 
     const classMetadata: ClassMetadata = {
-      name: rMetadata.name,
+      name: reflectMetadata.name,
       properties: properties.filter(Boolean),
     };
     return (this.store[classType.name] = classMetadata);
@@ -93,7 +145,7 @@ export class DefaultMetadataStore extends BaseMetadataStore {
         }
         meta.input = decorator.get;
         meta.min = decorator.min || 1;
-        meta.max = decorator.max || 3;
+        meta.max = Math.max(decorator.max || 3, meta.min);
         let inputType: any = decorator.type?.();
         if (inputType) {
           meta.typeFromDecorator = true;
@@ -126,9 +178,7 @@ export class DefaultMetadataStore extends BaseMetadataStore {
           return meta as PropertyMetadata;
         }
       } else if (Array.isArray(prop.type)) {
-        throw new Error(
-          `The type of "${meta.name}" seems to be an array. Use @Fixture({ type: () => Foo })`
-        );
+        return meta as any;
       } else if (prop.type instanceof Function) {
         const { name } = prop.type as Function;
         if (!['string', 'number', 'boolean'].includes(name.toLowerCase())) {
@@ -137,11 +187,6 @@ export class DefaultMetadataStore extends BaseMetadataStore {
           meta.type = name.toLowerCase();
         }
       }
-    }
-    if (!meta.type) {
-      throw new Error(
-        `Couldn't extract the type of "${meta.name}". Use @Fixture({ type: () => Foo })`
-      );
     }
     return meta as PropertyMetadata;
   }

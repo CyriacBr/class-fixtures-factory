@@ -1,8 +1,9 @@
 import { ValidationMetadata } from 'class-validator/metadata/ValidationMetadata';
 import { getFromContainer, MetadataStorage } from 'class-validator';
 import faker from 'faker';
-import { PropertyMetadata } from '.';
-import { Class } from '..';
+import { PropertyMetadata } from '../../metadata';
+import { Class } from '../..';
+import { BaseMetadataAdapter } from '../../metadata/BaseMetadataAdapter';
 
 interface WorkingData {
   type?: 'number' | 'decimal' | 'date' | 'alpha' | 'alphanumeric' | 'array';
@@ -12,23 +13,24 @@ interface WorkingData {
   options?: any;
 }
 
-export class ClassValidatorAdapter {
-  private metadata: Record<string, ValidationMetadata[]> = {};
-
-  extractMedatada(classType: Class) {
-    const metadata = getFromContainer(
-      MetadataStorage
-    ).getTargetValidationMetadatas(classType, '');
-    return (this.metadata[classType.name] = metadata);
+export class ClassValidatorAdapter extends BaseMetadataAdapter<
+  ValidationMetadata
+> {
+  makeOwnMetadata(classType: Class) {
+    return getFromContainer(MetadataStorage).getTargetValidationMetadatas(
+      classType,
+      ''
+    );
   }
 
-  makePropertyMetadata(
-    cvMeta: ValidationMetadata,
-    existingProp: PropertyMetadata | undefined
-  ): PropertyMetadata | Partial<PropertyMetadata> | null {
-    const prop: Partial<PropertyMetadata> = {
+  deduceMetadata(
+    defaultProp: PropertyMetadata | undefined,
+    cvMeta: ValidationMetadata
+  ): PropertyMetadata | null {
+    const prop: PropertyMetadata = {
       name: cvMeta.propertyName,
-      ...(existingProp || {}),
+      type: '',
+      ...(defaultProp || {}),
     };
     const data: WorkingData = {
       type: null as any,
@@ -42,7 +44,7 @@ export class ClassValidatorAdapter {
           ...prop,
           type: prop.type || 'boolean',
           input: () => faker.random.boolean(),
-        } as PropertyMetadata;
+        };
       }
       case 'isDate': {
         data.type = 'date';
@@ -64,7 +66,7 @@ export class ClassValidatorAdapter {
           ...prop,
           type: prop.type || 'any',
           input: () => faker.random.arrayElement(items),
-        } as PropertyMetadata;
+        };
       }
       case 'equals':
         return {

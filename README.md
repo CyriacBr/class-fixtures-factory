@@ -66,21 +66,32 @@ const agedAuthor = factory
   .one();
 ```
 
+### Using `class-validator` metadatas
+
+If you happen to use `class-validator` decorators for your entities, you can generate fixtures from them, as long as you import `class-fixtures-factory/plugins/class-validator` somewhere in your entry point.
+
+```ts
+import 'class-fixtures-factory/plugins/class-validator';
+```
+
+Note that this will require having `class-validator` version `0.11` to be installed.
+**Version 0.12.x+ is broken and doesn't store the decorator names, so it's impossible for this lib to work alongside.**
+
 ### Customization
 
 As stated previously, you'll need to annotate your class properties somehow, because types metadata
 are used for generating fixtures.
 The lib exposes a `Fixture` decorator for that purpose and for further customization.
 If your properties are already annotated with decorators from `class-validator`, there's no need to use `Fixture`, mostly. 
-However, there are some cases where the `Fixture` decorator is **mandatory**;
+However, there are some cases where the `Fixture` decorator is **mandatory**:
 
-- If the type is an array
-- If the type is an enum
+- If the property type is an array
+- If the property type is an enum
 
 ```ts
 class Author {
   // decorator from class-validator
-  // no need to use Fixture
+  // no need to use Fixture if you use the plugin
   @Length(5, 10)
   name: string;
 

@@ -1,9 +1,4 @@
-import {
-  BaseMetadataStore,
-  DefaultMetadataStore,
-  ClassMetadata,
-  PropertyMetadata,
-} from './metadata';
+import { MetadataStore, ClassMetadata, PropertyMetadata } from './metadata';
 import { Class } from './common/typings';
 import faker from 'faker';
 import chalk from 'chalk';
@@ -36,7 +31,7 @@ export type Assigner = (
 ) => void;
 
 export class FixtureFactory {
-  private store: BaseMetadataStore;
+  private store = new MetadataStore();
   private classTypes: Record<string, Class> = {};
   private DEFAULT_OPTIONS: FactoryOptions = {
     logging: false,
@@ -48,7 +43,6 @@ export class FixtureFactory {
   private assigner: Assigner = this.defaultAssigner.bind(this);
 
   constructor(options?: FactoryOptions) {
-    this.store = new DefaultMetadataStore();
     this.options = {
       ...this.DEFAULT_OPTIONS,
       ...(options || {}),
@@ -66,16 +60,6 @@ export class FixtureFactory {
    */
   setAssigner(fn: Assigner) {
     this.assigner = fn;
-  }
-
-  /**
-   * You can set a custom metadata store
-   * for extension purposes.
-   * The store should extends `BaseMetadataStore`
-   * @param store
-   */
-  setMetadataStore(store: BaseMetadataStore) {
-    this.store = store;
   }
 
   /**
@@ -157,7 +141,7 @@ export class FixtureFactory {
           }
         } catch (err) {
           this.log(
-            chalk.red(`An error occured while generating "${meta.name}"`),
+            chalk.red(`An error occurred while generating "${meta.name}"`),
             true
           );
           console.error(err);
@@ -214,12 +198,12 @@ export class FixtureFactory {
       this.logger().onCustomProp(prop);
       return prop.input();
     }
-    if (prop.scalar) {
-      const value = this.makeScalarProperty(prop);
+    if (prop.array) {
+      return this.makeArrayProp(prop, meta);
+    } else if (prop.scalar) {
+      const value = prop.libraryInput?.() || this.makeScalarProperty(prop);
       this.logger().onNormalProp(prop, value);
       return value;
-    } else if (prop.array) {
-      return this.makeArrayProp(prop, meta);
     }
     return this.makeObjectProp(meta, prop);
   }
@@ -247,26 +231,16 @@ export class FixtureFactory {
 
   private makeArrayProp(prop: PropertyMetadata, meta: ClassMetadata) {
     const amount = faker.random.number({
-      max: prop.max,
-      min: prop.min,
+      max: prop.max ?? 3,
+      min: prop.min ?? 1,
     });
-    if (['string', 'number', 'boolean', 'Date'].includes(prop.type)) {
-      return [...Array(amount).keys()].map(() =>
-        this.makeProperty(
-          {
-            ...prop,
-            array: false,
-            scalar: true,
-          },
-          meta
-        )
-      );
-    }
+    const scalar = ['string', 'number', 'boolean', 'Date'].includes(prop.type);
     return [...Array(amount).keys()].map(() =>
       this.makeProperty(
         {
           ...prop,
           array: false,
+          scalar,
         },
         meta
       )
