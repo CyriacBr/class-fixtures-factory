@@ -20,7 +20,8 @@
   "typings": "dist/index.d.ts",
   "files": [
     "dist",
-    "plugins/class-validator"
+    "plugins/class-validator",
+    "plugins/type-graphql"
   ],
   "engines": {
     "node": ">=10"
@@ -67,6 +68,11 @@
     "tslib": "^2.1.0",
     "type-graphql": "^1.1.1",
     "typescript": "^3.8.3"
+  },
+  "peerDependencies": {
+    "class-validator": "0.11.1",
+    "type-graphql": "^1.1.1",
+    "graphql": "^15.5.0"
   },
   "dependencies": {
     "@types/faker": "^4.1.10",
