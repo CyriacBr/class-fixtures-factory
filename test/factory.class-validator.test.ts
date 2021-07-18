@@ -32,7 +32,7 @@ import {
 import '../src/plugins/class-validator';
 
 describe(`FixtureFactory`, () => {
-  const factory = new FixtureFactory({ logging: false });
+  const factory = new FixtureFactory();
 
   describe(`with class-validator`, () => {
     it(`throws if type can't be resolved`, () => {
@@ -255,7 +255,6 @@ describe(`FixtureFactory`, () => {
       factory.register([Dummy]);
 
       const dummy = factory.make(Dummy).one();
-      console.log('[Length]: ', dummy.val, dummy.val.length);
       expect(dummy.val.length >= 20 && dummy.val.length <= 30).toBe(true);
     });
 
@@ -267,7 +266,6 @@ describe(`FixtureFactory`, () => {
       factory.register([Dummy]);
 
       const dummy = factory.make(Dummy).one();
-      console.log('[MinLength]: ', dummy.val, dummy.val.length);
       expect(dummy.val.length >= 20).toBe(true);
     });
 
@@ -279,7 +277,6 @@ describe(`FixtureFactory`, () => {
       factory.register([Dummy]);
 
       const dummy = factory.make(Dummy).one();
-      console.log('[MaxLength]: ', dummy.val, dummy.val.length);
       expect(dummy.val.length <= 5).toBe(true);
     });
 
@@ -303,7 +300,6 @@ describe(`FixtureFactory`, () => {
       factory.register([Dummy]);
 
       const dummy = factory.make(Dummy).one();
-      console.log('[ArrayMinSize] dummy :', dummy);
       expect(dummy.val.length >= 4).toBe(true);
     });
 
@@ -316,7 +312,6 @@ describe(`FixtureFactory`, () => {
       factory.register([Dummy]);
 
       const dummy = factory.make(Dummy).one();
-      console.log('[ArrayMaxSize] dummy :', dummy);
       expect(dummy.val.length <= 2).toBe(true);
     });
 

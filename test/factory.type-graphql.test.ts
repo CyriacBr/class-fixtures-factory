@@ -14,7 +14,7 @@ import '../src/plugins/type-graphql';
 import { GraphQLScalarType, Kind } from 'graphql';
 
 describe(`FixtureFactory`, () => {
-  const factory = new FixtureFactory({ logging: false });
+  const factory = new FixtureFactory();
 
   describe(`with type-graphql`, () => {
     it(`throws if type can't be resolved`, () => {

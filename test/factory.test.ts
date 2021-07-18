@@ -2,7 +2,7 @@ import { FixtureFactory, Assigner } from '../src/FixtureFactory';
 import { Fixture } from '../src/decorators/Fixture';
 
 describe(`FixtureFactory`, () => {
-  const factory = new FixtureFactory({ logging: false });
+  const factory = new FixtureFactory();
 
   it(`makes metadata of registered entities`, () => {
     class DummyAuthor {}
@@ -266,7 +266,7 @@ describe(`FixtureFactory`, () => {
     });
 
     it(`custom assigner`, () => {
-      const factory = new FixtureFactory({ logging: true });
+      const factory = new FixtureFactory();
       const assigner: Assigner = (prop, obj, _value) => {
         obj[prop.name] = 'foo';
       };
