@@ -218,24 +218,6 @@ describe(`FixtureFactory`, () => {
       expect(typeof person.book.title).toBe('string');
     });
 
-    it(`class [prevent circular ref]`, () => {
-      class Book {
-        @Fixture()
-        title!: string;
-        @Fixture({ type: () => Person })
-        author!: Person;
-      }
-      class Person {
-        @Fixture({ type: () => Book })
-        book!: Book;
-      }
-      factory.register([Person, Book]);
-
-      const person = factory.make(Person).one();
-      expect(person.book).toBeInstanceOf(Book);
-      expect(person.book.author).toBeUndefined();
-    });
-
     it(`class [many to many]`, () => {
       class Book {
         @Fixture({ type: () => [BookTag] })
@@ -249,7 +231,7 @@ describe(`FixtureFactory`, () => {
 
       const book = factory.make(Book).one();
       expect(book.tags[0]).toBeInstanceOf(BookTag);
-      expect(book.tags[0].books).toBeUndefined();
+      expect(book.tags[0].books[0]).toBeInstanceOf(Book);
     });
 
     it(`multi-level nesting`, () => {
@@ -303,5 +285,470 @@ describe(`FixtureFactory`, () => {
       expect(mock).toHaveBeenCalled();
       expect(author.name).toBe('foo');
     });
+  });
+
+  describe(`circular references support`, () => {
+    describe(`depthLevel`, () => {
+      it(`[maxDepthLevel = 0]`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => DummyBook })
+          book!: DummyBook;
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory.make(DummyAuthor, { maxDepthLevel: 0 }).one();
+        /**
+         * no relationships are generated
+         */
+        expect(author.book).toBeUndefined();
+      });
+
+      it(`[maxDepthLevel = 0] with a one-to-many relationship`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook] })
+          books!: DummyBook[];
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          title!: string;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory.make(DummyAuthor, { maxDepthLevel: 0 }).one();
+        /**
+         * no relationships are generated
+         */
+        expect(author.books.length).toBe(0);
+      });
+
+      it(`[maxDepthLevel = 3]`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => DummyBook })
+          book!: DummyBook;
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxDepthLevel: 3,
+            reuseCircularRelationships: false,
+            maxOccurrencesPerPath: Infinity,
+          })
+          .one();
+        /**
+         * up tp 3 nested relationships are generated
+         */
+        expect(author.book).toBeDefined();
+        expect(author.book.author).toBeDefined();
+        expect(author.book.author.book).toBeDefined();
+        expect(author.book.author.book.author).toBeUndefined();
+      });
+
+      it(`[maxDepthLevel = 3] with a one-to-many relationship`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook], min: 2, max: 2 })
+          books!: DummyBook[];
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxDepthLevel: 3,
+            reuseCircularRelationships: false,
+            maxOccurrencesPerPath: Infinity,
+          })
+          .one();
+        /**
+         * up to 3 nested relationships are generated for each path
+         */
+        for (let i = 0; i < 2; i++) {
+          expect(author.books[i]).toBeDefined();
+          expect(author.books[i].author).toBeDefined();
+          for (let j = 0; j < 2; j++) {
+            expect(author.books[i].author.books[j]).toBeDefined();
+            expect(author.books[i].author.books[j].author).toBeUndefined();
+          }
+        }
+      });
+
+      it(`[maxDepthLevel = 3] with a many-to-many relationship`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook], min: 2, max: 2 })
+          books!: DummyBook[];
+        }
+        class DummyBook {
+          @Fixture({ type: () => [DummyAuthor], min: 2, max: 2 })
+          authors!: DummyAuthor[];
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxDepthLevel: 4,
+            reuseCircularRelationships: false,
+            maxOccurrencesPerPath: Infinity,
+          })
+          .one();
+        /**
+         * up to 4 nested relationships are generated for each path, including nested array paths
+         */
+        for (let i = 0; i < 2; i++) {
+          expect(author.books[i]).toBeDefined();
+          expect(author.books[i].authors[0]).toBeDefined();
+          for (let j = 0; j < 2; j++) {
+            expect(author.books[i].authors[0].books[j]).toBeDefined();
+            expect(
+              author.books[i].authors[0].books[j].authors[0]
+            ).toBeDefined();
+            expect(
+              author.books[i].authors[0].books[j].authors[0].books[0]
+            ).toBeUndefined();
+          }
+        }
+      });
+    });
+
+    describe(`reuseCircularRelationships`, () => {
+      it(`[reuseCircularRelationships = false]`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => DummyBook })
+          book!: DummyBook;
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 10,
+            reuseCircularRelationships: false,
+          })
+          .one();
+        /**
+         * new instances are created for each relationship
+         */
+        expect(author.book.author).toBeInstanceOf(DummyAuthor);
+        expect(author.book.author).not.toBe(author);
+        expect(author.book.author.book).toBeInstanceOf(DummyBook);
+        expect(author.book.author.book).not.toBe(author.book);
+      });
+
+      it(`[reuseCircularRelationships = false] with a one-to-many relationship`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook], min: 2, max: 2 })
+          books!: DummyBook[];
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 10,
+            reuseCircularRelationships: false,
+          })
+          .one();
+        /**
+         * new instances are created for each relationship
+         */
+        expect(author.books[0].author).toBeInstanceOf(DummyAuthor);
+        expect(author.books[0].author).not.toBe(author);
+        expect(author.books[0].author.books[0]).toBeInstanceOf(DummyBook);
+        expect(author.books[0].author.books[0]).not.toBe(author.books[0]);
+      });
+
+      it(`[reuseCircularRelationships = false] with a many-to-many relationship`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook], min: 2, max: 2 })
+          books!: DummyBook[];
+        }
+        class DummyBook {
+          @Fixture({ type: () => [DummyAuthor], min: 2, max: 2 })
+          authors!: DummyAuthor[];
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxDepthLevel: 10,
+            maxOccurrencesPerPath: 10,
+            reuseCircularRelationships: false,
+          })
+          .one();
+        /**
+         * new instances are created for each relationship
+         */
+        expect(author.books[0].authors[0]).toBeInstanceOf(DummyAuthor);
+        expect(author.books[0].authors[0]).not.toBe(author);
+        expect(author.books[0].authors[0].books[0]).toBeInstanceOf(DummyBook);
+        expect(author.books[0].authors[0].books[0]).not.toBe(author.books[0]);
+        expect(author.books[0].authors[0].books[0].authors[0]).toBeInstanceOf(
+          DummyAuthor
+        );
+        expect(author.books[0].authors[0].books[0].authors[0]).not.toBe(author);
+      });
+
+      it(`[reuseCircularRelationships = true]`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => DummyBook })
+          book!: DummyBook;
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 1,
+            reuseCircularRelationships: true,
+          })
+          .one();
+        /**
+         * old instances are reused for each new relationship
+         */
+        expect(author.book.author).toBeInstanceOf(DummyAuthor);
+        expect(author.book.author).toBe(author);
+        expect(author.book.author.book).toBeInstanceOf(DummyBook);
+        expect(author.book.author.book).toBe(author.book);
+      });
+
+      it(`[reuseCircularRelationships = true] with one-to-many relationship`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook], min: 2, max: 2 })
+          books!: DummyBook[];
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 1,
+            reuseCircularRelationships: true,
+          })
+          .one();
+        /**
+         * old instances are reused for each new relationship
+         */
+        expect(author.books[0].author).toBeInstanceOf(DummyAuthor);
+        expect(author.books[0].author).toBe(author);
+        expect(author.books[0].author.books[0]).toBeInstanceOf(DummyBook);
+        expect(author.books[0].author.books[0]).toBe(author.books[0]);
+      });
+
+      it(`[reuseCircularRelationships = true] with many-to-many relationship`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook], min: 2, max: 2 })
+          books!: DummyBook[];
+        }
+        class DummyBook {
+          @Fixture({ type: () => [DummyAuthor], min: 2, max: 2 })
+          authors!: DummyAuthor[];
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 1,
+            reuseCircularRelationships: true,
+          })
+          .one();
+        /**
+         * old instances are reused for each new relationship
+         */
+        expect(author.books[0].authors[0]).toBeInstanceOf(DummyAuthor);
+        expect(author.books[0].authors[0]).toBe(author);
+        expect(author.books[0].authors[0].books[0]).toBeInstanceOf(DummyBook);
+        expect(author.books[0].authors[0].books[0]).toBe(author.books[0]);
+        expect(author.books[0].authors[0].books[0].authors[0]).toBeInstanceOf(
+          DummyAuthor
+        );
+        expect(author.books[0].authors[0].books[0].authors[0]).toBe(author);
+      });
+    });
+
+    describe(`maxOccurrencePerPath`, () => {
+      it(`[maxOccurrencePerPath = 1]`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => DummyBook })
+          book!: DummyBook;
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 1,
+            reuseCircularRelationships: false,
+          })
+          .one();
+        /**
+         * the Author instance is created only once
+         */
+        expect(author.book.author).toBeUndefined();
+      });
+
+      it(`[maxOccurrencePerPath = 1] with one-to-many relationship`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook] })
+          books!: DummyBook[];
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 1,
+            reuseCircularRelationships: false,
+          })
+          .one();
+        /**
+         * the Author instance is created only once
+         */
+        expect(author.books[0].author).toBeUndefined();
+      });
+
+      it(`[maxOccurrencePerPath = 1] with many-to-many relationship`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook] })
+          books!: DummyBook[];
+        }
+        class DummyBook {
+          @Fixture({ type: () => [DummyAuthor] })
+          authors!: DummyAuthor[];
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 1,
+            reuseCircularRelationships: false,
+          })
+          .one();
+        /**
+         * the Author instance is created only once
+         */
+        expect(author.books[0].authors[0]).toBeUndefined();
+      });
+
+      it(`[maxOccurrencePerPath > 1]`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => DummyBook })
+          book!: DummyBook;
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 2,
+            reuseCircularRelationships: false,
+          })
+          .one();
+        /**
+         * the Author instance is created multiple times
+         */
+        expect(author.book.author).toBeDefined();
+      });
+
+      it(`[maxOccurrencePerPath > 1] with one-to-many relationship`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook] })
+          books!: DummyBook[];
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 2,
+            reuseCircularRelationships: false,
+          })
+          .one();
+        /**
+         * the Author instance is created multiple times
+         */
+        expect(author.books[0].author).toBeDefined();
+      });
+
+      it(`[maxOccurrencePerPath > 1] with many-to-many relationship`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook] })
+          books!: DummyBook[];
+        }
+        class DummyBook {
+          @Fixture({ type: () => [DummyAuthor] })
+          authors!: DummyAuthor[];
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 2,
+            reuseCircularRelationships: false,
+          })
+          .one();
+        /**
+         * the Author instance is created multiple times
+         */
+        expect(author.books[0].authors[0]).toBeDefined();
+      });
+    });
+
+    it(`timeout when factory takes too long`, () => {
+      class DummyAuthor {
+        @Fixture({ type: () => [DummyBook], min: 2, max: 2 })
+        books!: DummyBook[];
+      }
+      class DummyBook {
+        @Fixture({ type: () => [DummyAuthor], min: 2, max: 2 })
+        authors!: DummyAuthor[];
+      }
+      factory.register([DummyAuthor, DummyBook]);
+
+      // expect(() => factory.make).toThrow() is not working...
+      try {
+        factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 10,
+            reuseCircularRelationships: false,
+          })
+          .one();
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
+    }, 4000);
   });
 });

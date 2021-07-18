@@ -6,7 +6,6 @@ import { FactoryLogger } from './FactoryLogger';
 
 export interface FactoryOptions {
   logging?: boolean;
-  maxDepth?: number;
 }
 
 type DeepPartial<T> = {
@@ -15,6 +14,14 @@ type DeepPartial<T> = {
     : T[P] extends ReadonlyArray<infer U>
     ? ReadonlyArray<DeepPartial<U>>
     : DeepPartial<T[P]>;
+};
+
+type DeepRequired<T> = {
+  [P in keyof T]-?: T[P] extends Array<infer U>
+    ? Array<DeepRequired<U>>
+    : T[P] extends ReadonlyArray<infer U>
+    ? ReadonlyArray<DeepRequired<U>>
+    : DeepRequired<T[P]>;
 };
 
 export interface FactoryResult<T> {
@@ -30,15 +37,85 @@ export type Assigner = (
   value: any
 ) => void;
 
+export interface FactoryMakeOptions {
+  /**
+   * Defines how deep relationships should be generated.
+   * With a level of 0, no relationships are generated at all
+   * Relationships that are not generated result in undefined properties, or link to previous
+   * references when `reuseCircularRelationships` is true
+   *
+   * The default level of depth is 100
+   */
+  maxDepthLevel?: number;
+  /**
+   * Defines if circular relationships should be reused, or if new instances should be
+   * generated for every relationship.
+   * For example, let's say we have an `Author` class which has a `book` property. Likewise,
+   * the `Book` class also has an `author` property. So, trying to generate the `Author` class
+   * will lead to an infinite chain: Author -> Book -> Author -> Book, and so on.
+   *
+   * If `reuseCircularRelationships` is set to false, a new object is created each time, up
+   * to the limit of `maxDepthLevel` and according to `maxOccurrencesPerPath`. The resulting tree will look like this:
+   * Author (instance 1) -> Book (instance 1) -> Author (instance 2) -> Book (instance 2) and so on.
+   *
+   * If `reuseCircularRelationships` is set to true, previous relationships are reused.
+   * `make(Author)` will generate a new `Author` object, then a new `Book` object as well,
+   * but the property `book.author` will point to the previous object, and will not lead to a new created
+   * object. We'll have a circular reference.
+   *
+   * The default value is true
+   */
+  reuseCircularRelationships?: boolean;
+  /**
+   * This parameter defines how many instance of the same class should be generated per path.
+   * It helps to prevent infinite instances from circular relationships that are not direct.
+   * Let's say we have these relationships:
+   * - User -> Book (User.book)
+   * - Book -> Shelf (Book.shelf)
+   * - Shelf -> User (Shelf.owner)
+   *
+   * We have this indirect circular relationship: User -> Book -> Shelf -> User
+   * `maxDepthLevel` can stop circular relationships from causing infinite instances, but it doesn't give you much control
+   * over where the path will stop. `maxOccurrencesPerPath` does.
+   * If it is set to 1, only one instance per generated class are allowed on the same path.
+   * For example, `make(User)` will generate User, then Book (User.book), then Shelf (Book.shelf), but will
+   * not generate User (Shelf.owner) once again, as an instance of User as already been created.
+   * Shelf.owner will be undefined, or will link to the previous `User` occurrence if `reuseCircularRelationships` is set to true.
+   *
+   * The default value is 1
+   */
+  maxOccurrencesPerPath?: number;
+  /**
+   * A timeout in seconds to prevent cases where the factory would generate an absurd amount
+   * of objects. This could happen with many-to-many relationships and with `reuseCircularRelationships` set to false.
+   * The factory will throw when a timeout happens.
+   *
+   * Default value is 3
+   */
+  timeout?: number;
+}
+
+export interface FactoryContext {
+  depthLevel: number;
+  options: DeepRequired<FactoryMakeOptions>;
+  path: string[];
+  pathReferences: InstanceType<Class>[];
+  startDate: Date;
+}
+
 export class FixtureFactory {
   private store = new MetadataStore();
   private classTypes: Record<string, Class> = {};
   private DEFAULT_OPTIONS: FactoryOptions = {
     logging: false,
-    maxDepth: 4,
+  };
+  private DEFAULT_MAKE_OPTIONS: DeepRequired<FactoryMakeOptions> = {
+    maxDepthLevel: 100,
+    maxOccurrencesPerPath: 1,
+    reuseCircularRelationships: true,
+    timeout: 3,
   };
   private options!: FactoryOptions;
-  private depthness: string[] = [];
   private loggers: FactoryLogger[] = [];
   private assigner: Assigner = this.defaultAssigner.bind(this);
 
@@ -70,7 +147,7 @@ export class FixtureFactory {
   }
 
   /**
-   * Attemps to log a message.
+   * Attempts to log a message.
    * Won't work if logging is disabled.
    * @param msg
    */
@@ -119,14 +196,37 @@ export class FixtureFactory {
    * Generate fixtures
    * @param classType
    */
-  make<T extends Class>(classType: T): FactoryResult<InstanceType<T>> {
+  make<T extends Class>(
+    classType: T,
+    options: FactoryMakeOptions = {}
+  ): FactoryResult<InstanceType<T>> {
+    const ctxOptions: DeepRequired<FactoryMakeOptions> = {
+      ...this.DEFAULT_MAKE_OPTIONS,
+      ...(options || {}),
+    };
+
+    if (
+      ctxOptions.maxDepthLevel === Infinity &&
+      ctxOptions.maxOccurrencesPerPath === Infinity
+    ) {
+      throw new Error(
+        `"maxDepthLevel" and "maxOccurrencesPerPath" can't be both Infinity`
+      );
+    }
+
     this.store.make(classType);
     const meta = this.store.get(classType);
     let propsToIgnore: string[] = [];
     let userInput: DeepPartial<T> = {};
+    const ctx: FactoryContext = {
+      depthLevel: 0,
+      options: ctxOptions,
+      path: [],
+      pathReferences: [],
+      startDate: new Date(),
+    };
 
-    this.depthness = [];
-
+    // TODO: Add timeout in case generating stuff takes too long. It can happen depending on settings
     const result: FactoryResult<InstanceType<T>> = {
       one: () => {
         let error = false;
@@ -135,7 +235,7 @@ export class FixtureFactory {
         this.newLogger(meta);
 
         try {
-          object = this._make(meta, classType, propsToIgnore);
+          object = this._make(meta, classType, propsToIgnore, ctx);
           for (const [key, value] of Object.entries(userInput)) {
             object[key] = value;
           }
@@ -171,18 +271,25 @@ export class FixtureFactory {
     return result;
   }
 
-  protected _make(
+  protected _make<T extends Class>(
     meta: ClassMetadata,
-    classType: Class,
-    propsToIgnore: string[] = []
+    classType: T,
+    propsToIgnore: string[] = [],
+    ctx: FactoryContext
   ) {
-    this.depthness.push(classType.name);
+    const elapsed = new Date().getTime() - ctx.startDate.getTime();
+    if (elapsed >= ctx.options.timeout * 1000) {
+      throw new Error(
+        `Timeout: generating is taking too long. Try lowering the value of "maxDepthLevel" and activate "reuseCircularRelationships"`
+      );
+    }
 
     const object = new classType();
+    ctx.pathReferences.push(object);
     for (const prop of meta.properties) {
       if (propsToIgnore.includes(prop.name)) continue;
       if (this.shouldIgnoreProperty(prop)) continue;
-      this.assigner(prop, object, this.makeProperty(prop, meta));
+      this.assigner(prop, object, this.makeProperty(prop, meta, ctx));
     }
     return object;
   }
@@ -193,19 +300,23 @@ export class FixtureFactory {
     return false;
   }
 
-  protected makeProperty(prop: PropertyMetadata, meta: ClassMetadata): any {
+  protected makeProperty(
+    prop: PropertyMetadata,
+    meta: ClassMetadata,
+    ctx: FactoryContext
+  ): any {
     if (prop.input) {
       this.logger().onCustomProp(prop);
       return prop.input();
     }
     if (prop.array) {
-      return this.makeArrayProp(prop, meta);
+      return this.makeArrayProp(prop, meta, ctx);
     } else if (prop.scalar) {
       const value = prop.libraryInput?.() || this.makeScalarProperty(prop);
       this.logger().onNormalProp(prop, value);
       return value;
     }
-    return this.makeObjectProp(meta, prop);
+    return this.makeObjectProp(meta, prop, ctx);
   }
 
   protected makeScalarProperty(prop: PropertyMetadata) {
@@ -229,51 +340,75 @@ export class FixtureFactory {
     throw new Error(`Can't generate a value for this scalar: ${prop.type}`);
   }
 
-  private makeArrayProp(prop: PropertyMetadata, meta: ClassMetadata) {
+  private makeArrayProp(
+    prop: PropertyMetadata,
+    meta: ClassMetadata,
+    ctx: FactoryContext
+  ) {
     const amount = faker.random.number({
       max: prop.max ?? 3,
       min: prop.min ?? 1,
     });
     const scalar = ['string', 'number', 'boolean', 'Date'].includes(prop.type);
-    return [...Array(amount).keys()].map(() =>
-      this.makeProperty(
-        {
-          ...prop,
-          array: false,
-          scalar,
-        },
-        meta
-      )
-    );
+    return [...Array(amount).keys()]
+      .map((_, i) => {
+        const newContext: FactoryContext = {
+          ...ctx,
+          path: [...ctx.path, String(i)],
+        };
+        return this.makeProperty(
+          {
+            ...prop,
+            array: false,
+            scalar,
+          },
+          meta,
+          newContext
+        );
+      })
+      .filter(Boolean);
   }
 
-  private makeObjectProp(meta: ClassMetadata, prop: PropertyMetadata) {
+  private makeObjectProp(
+    meta: ClassMetadata,
+    prop: PropertyMetadata,
+    ctx: FactoryContext
+  ) {
     const refClassMeta = this.store.get(prop.type);
-    const props = this.findRefSideProps(meta, prop);
 
     const oldLogger = this.logger();
     const logger = this.newLogger(refClassMeta);
 
+    const newCtx: FactoryContext = { ...ctx, path: [...ctx.path] };
+    newCtx.path = [...newCtx.path, `${meta.name}.${prop.name}`];
+    const occurrenceNbr = newCtx.path.filter(v => v.startsWith(prop.type))
+      .length;
+    if (
+      newCtx.depthLevel >= newCtx.options.maxDepthLevel! ||
+      occurrenceNbr >= newCtx.options.maxOccurrencesPerPath!
+    ) {
+      const lastInstance = [...newCtx.pathReferences]
+        .reverse()
+        .find(v => v.constructor.name === prop.type);
+      oldLogger.onClassPropDone(prop, logger);
+      if (lastInstance && newCtx.options.reuseCircularRelationships) {
+        return lastInstance;
+      }
+      return undefined;
+    }
+    newCtx.depthLevel += 1;
+
     const value = this._make(
       refClassMeta,
       this.classTypes[prop.type],
-      props.map(p => p.name)
+      [],
+      newCtx
     );
+    newCtx.pathReferences.push(value);
 
     oldLogger.onClassPropDone(prop, logger);
     this.disposeLogger();
 
     return value;
-  }
-
-  private findRefSideProps(meta: ClassMetadata, prop: PropertyMetadata) {
-    const props: PropertyMetadata[] = [];
-    const refClassMeta = this.store.get(prop.type);
-    for (const refProp of refClassMeta.properties) {
-      if (refProp.type === meta.name) {
-        props.push(refProp);
-      }
-    }
-    return props;
   }
 }
