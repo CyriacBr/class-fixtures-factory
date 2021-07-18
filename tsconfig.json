@@ -4,7 +4,7 @@
     "downlevelIteration": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "module": "esnext",
+    "module": "commonjs",
     "lib": ["dom", "esnext"],
     "importHelpers": true,
     "declaration": true,
@@ -18,7 +18,7 @@
     "strictPropertyInitialization": true,
     "noImplicitThis": true,
     "alwaysStrict": true,
-    "noUnusedLocals": true,
+    "noUnusedLocals": false,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
@@ -28,6 +28,6 @@
       "*": ["src/*", "node_modules/*"]
     },
     "jsx": "react",
-    "esModuleInterop": true
+    "esModuleInterop": true,
   }
 }

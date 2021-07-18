@@ -17,7 +17,7 @@
     "url": "https://github.com/CyriacBr/class-fixtures-factory.git"
   },
   "main": "dist/class-fixtures-factory.cjs.js",
-  "typings": "dist/index.d.ts",
+  "typings": "dist/class-fixtures-factory.cjs.d.ts",
   "files": [
     "dist",
     "plugins/class-validator",
@@ -64,6 +64,7 @@
     "prettier": "^1.19.1",
     "reflect-metadata": "^0.1.13",
     "standard-version": "7.1.0",
+    "ts-node": "^10.1.0",
     "tsdx": "^0.14.1",
     "tslib": "^2.1.0",
     "type-graphql": "^1.1.1",
@@ -71,8 +72,8 @@
   },
   "peerDependencies": {
     "class-validator": "0.11.1",
-    "type-graphql": "^1.1.1",
-    "graphql": "^15.5.0"
+    "graphql": "^15.5.0",
+    "type-graphql": "^1.1.1"
   },
   "dependencies": {
     "@types/faker": "^4.1.10",
