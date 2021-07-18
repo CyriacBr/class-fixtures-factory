@@ -376,9 +376,6 @@ export class FixtureFactory {
   ) {
     const refClassMeta = this.store.get(prop.type);
 
-    const oldLogger = this.logger();
-    const logger = this.newLogger(refClassMeta);
-
     const newCtx: FactoryContext = { ...ctx, path: [...ctx.path] };
     newCtx.path = [...newCtx.path, `${meta.name}.${prop.name}`];
     const occurrenceNbr = newCtx.path.filter(v => v.startsWith(prop.type))
@@ -390,18 +387,22 @@ export class FixtureFactory {
       const lastInstance = [...newCtx.pathReferences]
         .reverse()
         .find(v => v.constructor.name === prop.type);
-      oldLogger.onClassPropDone(prop, logger);
       if (lastInstance && newCtx.options.reuseCircularRelationships) {
+        this.logger().onReusedProp(prop);
         return lastInstance;
       }
+      this.logger().onPropNotGenerated(prop);
       return undefined;
     }
     newCtx.depthLevel += 1;
 
+    const oldLogger = this.logger();
+    const logger = this.newLogger(refClassMeta);
+
     const value = this._make(
       refClassMeta,
       this.classTypes[prop.type],
-      [],
+      [], //TODO: supports nested ignoreProps (with path)
       newCtx
     );
     newCtx.pathReferences.push(value);

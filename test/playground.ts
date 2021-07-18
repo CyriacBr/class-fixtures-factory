@@ -59,5 +59,7 @@ class Shelf {
 
 factory.register([User, Book, Shelf]);
 
-const result = factory.make(User, {}).one();
+const result = factory
+  .make(User, { maxDepthLevel: 1, reuseCircularRelationships: false })
+  .one();
 console.log('result :', inspect(result, { depth: Infinity, colors: true }));
