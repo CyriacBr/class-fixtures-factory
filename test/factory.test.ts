@@ -37,35 +37,103 @@ describe(`FixtureFactory`, () => {
     });
 
     it(`make().ignore()`, () => {
+      class DummyBook {
+        @Fixture()
+        title!: string;
+      }
       class DummyAuthor {
         @Fixture()
         name!: string;
         @Fixture()
         age!: string;
+        @Fixture()
+        book!: DummyBook;
       }
-      factory.register([DummyAuthor]);
+      factory.register([DummyAuthor, DummyBook]);
 
       const result = factory
         .make(DummyAuthor)
-        .ignore('age')
+        .ignore('age', 'book.title')
         .one();
       expect(result.age).toBeUndefined();
+      expect(result.book.title).toBeUndefined();
+      expect(result.name).not.toBeUndefined();
     });
 
-    it(`make().with()`, () => {
-      class DummyAuthor {
-        @Fixture()
-        name!: string;
-      }
-      factory.register([DummyAuthor]);
+    describe(`make().with()`, () => {
+      it(`replace a scalar`, () => {
+        class DummyAuthor {
+          @Fixture()
+          name!: string;
+        }
+        factory.register([DummyAuthor]);
 
-      const result = factory
-        .make(DummyAuthor)
-        .with({
-          name: 'foo',
-        })
-        .one();
-      expect(result.name).toBe('foo');
+        const result = factory
+          .make(DummyAuthor)
+          .with({
+            name: 'foo',
+          })
+          .one();
+        expect(result.name).toBe('foo');
+      });
+
+      it(`replace an object`, () => {
+        class DummyBook {}
+        class DummyAuthor {
+          @Fixture()
+          book!: DummyBook;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const result = factory
+          .make(DummyAuthor)
+          .with({
+            book: 'foo',
+          })
+          .one();
+        expect(result.book).toBe('foo');
+      });
+
+      it(`replace a nested prop`, () => {
+        class DummyBook {
+          @Fixture()
+          title!: string;
+        }
+        class DummyAuthor {
+          @Fixture()
+          book!: DummyBook;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const result = factory
+          .make(DummyAuthor)
+          .with({
+            'book.title': 'foo',
+          })
+          .one();
+        expect(result.book.title).toBe('foo');
+      });
+
+      it(`replace a nested prop through an array`, () => {
+        class DummyBook {
+          @Fixture({ get: () => 'bar' })
+          title!: string;
+        }
+        class DummyAuthor {
+          @Fixture({ type: () => [DummyBook], min: 2, max: 2 })
+          books!: DummyBook[];
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const result = factory
+          .make(DummyAuthor)
+          .with({
+            'books.1.title': 'foo',
+          })
+          .one();
+        expect(result.books[0].title).not.toBe('foo');
+        expect(result.books[1].title).toBe('foo');
+      });
     });
   });
 

@@ -29,16 +29,6 @@ export class FactoryLogger {
     this.tree = this.rootTree[entry];
   }
 
-  onIgnoreProp(prop: PropertyMetadata) {
-    const name = chalk.cyan(prop.name);
-    this.tree[name] = chalk.gray(`(ignored)`);
-  }
-
-  onCustomProp(prop: PropertyMetadata) {
-    const name = chalk.cyan(prop.name);
-    this.tree[name] = chalk.gray(`(custom value)`);
-  }
-
   onClassPropDone(prop: PropertyMetadata, targetLogger: FactoryLogger) {
     const name = chalk.cyan(prop.name);
     if (this.tree[name]) {
@@ -77,6 +67,16 @@ export class FactoryLogger {
   onPropNotGenerated(prop: PropertyMetadata) {
     const name = chalk.cyan(prop.name);
     this.tree[name] = `${chalk.gray('not generated')}`;
+  }
+
+  onIgnoredProp(prop: PropertyMetadata) {
+    const name = chalk.cyan(prop.name);
+    this.tree[name] = chalk.gray(`ignored`);
+  }
+
+  onCustomProp(prop: PropertyMetadata) {
+    const name = chalk.cyan(prop.name);
+    this.tree[name] = chalk.gray(`custom value`);
   }
 
   onDone(duration: number) {
