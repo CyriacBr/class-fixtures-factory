@@ -6652,11 +6652,6 @@ node-releases@^1.1.70:
   resolved "https://registry.yarnpkg.com/node-releases/-/node-releases-1.1.71.tgz#cb1334b179896b1c89ecfdd4b725fb7bbdfc7dbb"
   integrity sha512-zR6HoT6LrLCRBwukmrVbHv0EpEQjksO6GmFcZQQuCAy139BEsoVKPYnf3jongYW83fAa1torLGYwxxky/p28sg==
 
-normalize-newline@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/normalize-newline/-/normalize-newline-3.0.0.tgz#1cbea804aba436001f83938ab21ec039d69ae9d3"
-  integrity sha1-HL6oBKukNgAfg5OKsh7AOdaa6dM=
-
 normalize-package-data@^2.3.0, normalize-package-data@^2.3.2, normalize-package-data@^2.3.4, normalize-package-data@^2.5.0:
   version "2.5.0"
   resolved "https://registry.yarnpkg.com/normalize-package-data/-/normalize-package-data-2.5.0.tgz#e66db1838b200c1dfc233225d12cb36520e234a8"
@@ -7169,15 +7164,6 @@ pkg-dir@^4.1.0, pkg-dir@^4.2.0:
   integrity sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==
   dependencies:
     find-up "^4.0.0"
-
-pkg-ok@^2.3.1:
-  version "2.3.1"
-  resolved "https://registry.yarnpkg.com/pkg-ok/-/pkg-ok-2.3.1.tgz#d6dc4f079445a540db3656c1fc158517bc9f33c4"
-  integrity sha512-ObdQTDZO+zUJpljXM5HZdx+354o5qbQUs05oilAp2WisGoAmFw80y4RKMduZOmGpuXV1DWJ7PkZnkybd8QB68g==
-  dependencies:
-    chalk "^2.4.1"
-    meow "^5.0.0"
-    normalize-newline "^3.0.0"
 
 please-upgrade-node@^3.2.0:
   version "3.2.0"

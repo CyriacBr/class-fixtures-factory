@@ -34,7 +34,7 @@
     "release:first": "standard-version --first-release",
     "release": "standard-version",
     "release:publish": "git push --follow-tags origin develop && yarn publish",
-    "prepublish": "yarn build && pkg-ok",
+    "prepublish": "yarn build",
     "docs:api": "api-extractor run --local --verbose && cd docs && api-documenter markdown"
   },
   "module": "dist/class-fixtures-factory.esm.js",
@@ -60,7 +60,6 @@
     "husky": "^4.2.3",
     "jest-tap-reporter": "^1.9.0",
     "lint-staged": "^10.0.8",
-    "pkg-ok": "^2.3.1",
     "prettier": "^1.19.1",
     "reflect-metadata": "^0.1.13",
     "standard-version": "7.1.0",
