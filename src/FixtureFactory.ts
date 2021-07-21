@@ -3,27 +3,19 @@ import { Class } from './common/typings';
 import faker from 'faker';
 import chalk from 'chalk';
 import { FactoryLogger } from './FactoryLogger';
-import { DeepKeyOf } from 'utils/types';
+import { DeepKeyOf, DeepRequired } from 'utils/types';
 
 export interface FactoryOptions {
   logging?: boolean;
+  /**
+   * Defines wether properties are generated on demand,
+   * or eagerly. If this option is true, generated instances
+   * will be wrapped with a `Proxy`
+   *
+   * This overrides the `lazy` option from factory.make()
+   */
+  lazy?: boolean;
 }
-
-type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends Array<infer U>
-    ? Array<DeepPartial<U>>
-    : T[P] extends ReadonlyArray<infer U>
-    ? ReadonlyArray<DeepPartial<U>>
-    : DeepPartial<T[P]>;
-};
-
-type DeepRequired<T> = {
-  [P in keyof T]-?: T[P] extends Array<infer U>
-    ? Array<DeepRequired<U>>
-    : T[P] extends ReadonlyArray<infer U>
-    ? ReadonlyArray<DeepRequired<U>>
-    : DeepRequired<T[P]>;
-};
 
 export interface FactoryResult<T> {
   one: () => T;
@@ -112,6 +104,12 @@ export interface FactoryMakeOptions {
    * Default value is 3
    */
   timeout?: number;
+  /**
+   * Defines wether properties are generated on demand,
+   * or eagerly. If this option is true, generated instances
+   * will be wrapped with a `Proxy`
+   */
+  lazy?: boolean;
 }
 
 export interface FactoryContext {
@@ -129,18 +127,27 @@ export class FixtureFactory {
   private classTypes: Record<string, Class> = {};
   private DEFAULT_OPTIONS: FactoryOptions = {
     logging: false,
+    lazy: false,
   };
   private DEFAULT_MAKE_OPTIONS: DeepRequired<FactoryMakeOptions> = {
     maxDepthLevel: 100,
     maxOccurrencesPerPath: 1,
     reuseCircularRelationships: true,
     timeout: 3,
+    lazy: false,
   };
   private options!: FactoryOptions;
   private loggers: FactoryLogger[] = [];
   private assigner: Assigner = this.defaultAssigner.bind(this);
 
   constructor(options?: FactoryOptions) {
+    this.options = {
+      ...this.DEFAULT_OPTIONS,
+      ...(options || {}),
+    };
+  }
+
+  setOptions(options: FactoryOptions) {
     this.options = {
       ...this.DEFAULT_OPTIONS,
       ...(options || {}),
@@ -178,10 +185,10 @@ export class FixtureFactory {
     }
   }
 
-  newLogger(meta: ClassMetadata) {
+  newLogger(meta: ClassMetadata, lazy?: boolean) {
     this.loggers.unshift(new FactoryLogger());
     const logger = this.logger();
-    logger.start(meta);
+    logger?.start(meta, 0, lazy);
     return logger;
   }
 
@@ -225,6 +232,9 @@ export class FixtureFactory {
       ...this.DEFAULT_MAKE_OPTIONS,
       ...(options || {}),
     };
+    if (this.options.lazy) {
+      ctxOptions.lazy = true;
+    }
 
     if (
       ctxOptions.maxDepthLevel === Infinity &&
@@ -252,7 +262,7 @@ export class FixtureFactory {
         let error = false;
         let object: any = {};
         const startDate = new Date();
-        this.newLogger(meta);
+        this.newLogger(meta, ctx.options.lazy);
 
         try {
           object = this._make(meta, classType, ctx);
@@ -266,7 +276,7 @@ export class FixtureFactory {
         }
 
         const elapsed = +new Date() - +startDate;
-        this.logger()[error ? 'onError' : 'onDone'](elapsed);
+        this.logger()?.[error ? 'onError' : 'onDone'](elapsed);
         this.printLogger(true);
         return error ? null : object;
       },
@@ -299,6 +309,22 @@ export class FixtureFactory {
     }
 
     const object = new classType();
+    if (ctx.options.lazy) {
+      const proxy = new Proxy(object, {
+        get: (target, p) => {
+          if (typeof p === 'symbol') return target[p];
+          // - if the requested prop is already generated, we just return it
+          if (p in target) return target[p];
+          const prop = meta.properties.find(v => v.name === p);
+          if (!prop) {
+            throw new Error(`Couldn't generate lazily "${p}" of "${meta.name}`);
+          }
+          return (target[p] = this.makeProperty(prop, meta, ctx));
+        },
+      });
+      ctx.pathReferences.push(proxy);
+      return proxy;
+    }
     ctx.pathReferences.push(object);
     for (const prop of meta.properties) {
       if (prop.ignore) continue;
@@ -316,25 +342,25 @@ export class FixtureFactory {
       .map(v => v.split('.').reverse()[0])
       .join('.');
     if (ctx.ignoredPaths.includes(convertedPath)) {
-      this.logger().onIgnoredProp(prop);
+      this.logger()?.onIgnoredProp(prop);
       return undefined;
     }
     for (const [path, pathValue] of Object.entries(ctx.userInput)) {
       if (path === convertedPath) {
-        this.logger().onCustomProp(prop);
+        this.logger()?.onCustomProp(prop);
         return pathValue;
       }
     }
 
     if (prop.input) {
-      this.logger().onCustomProp(prop);
+      this.logger()?.onCustomProp(prop);
       return prop.input();
     }
     if (prop.array) {
       return this.makeArrayProp(prop, meta, ctx);
     } else if (prop.scalar) {
       const value = prop.libraryInput?.() || this.makeScalarProperty(prop);
-      this.logger().onNormalProp(prop, value);
+      this.logger()?.onNormalProp(prop, value);
       return value;
     }
     return this.makeObjectProp(meta, prop, ctx);
@@ -411,21 +437,21 @@ export class FixtureFactory {
         .reverse()
         .find(v => v.constructor.name === prop.type);
       if (lastInstance && newCtx.options.reuseCircularRelationships) {
-        this.logger().onReusedProp(prop);
+        this.logger()?.onReusedProp(prop);
         return lastInstance;
       }
-      this.logger().onPropNotGenerated(prop);
+      this.logger()?.onPropNotGenerated(prop);
       return undefined;
     }
     newCtx.depthLevel += 1;
 
     const oldLogger = this.logger();
-    const logger = this.newLogger(refClassMeta);
+    const logger = this.newLogger(refClassMeta, ctx.options.lazy);
 
     const value = this._make(refClassMeta, this.classTypes[prop.type], newCtx);
     newCtx.pathReferences.push(value);
 
-    oldLogger.onClassPropDone(prop, logger);
+    oldLogger?.onClassPropDone(prop, logger);
     this.disposeLogger();
 
     return value;

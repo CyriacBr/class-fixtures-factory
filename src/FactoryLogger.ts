@@ -20,9 +20,14 @@ export class FactoryLogger {
   private rootTree: any = {};
   private tree: any = {};
   private duplicates: Record<string, number> = {};
+  // TODO: Output lazy prop?
+  private lazy = false;
 
-  start(meta: ClassMetadata, number = 0) {
-    const entry = `New instance of ${chalk.cyan(meta.name)}${
+  start(meta: ClassMetadata, number = 0, lazy?: boolean) {
+    this.lazy = lazy ?? false;
+    const entry = `New${
+      lazy ? chalk.cyan(' lazy') : ''
+    } instance of ${chalk.cyan(meta.name)}${
       number ? `${chalk.gray(` (${number})`)}` : ''
     }`;
     this.rootTree[entry] = {};

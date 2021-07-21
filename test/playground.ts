@@ -3,63 +3,35 @@ import { Fixture } from '../src/decorators';
 import { inspect } from 'util';
 
 const factory = new FixtureFactory({ logging: true });
-// class Address {
-//   @Fixture()
-//   city!: string;
-// }
-// class Author {
-//   @Fixture()
-//   name!: string;
-//   @Fixture()
-//   address!: Address;
-//   @Fixture({ type: () => [Book], min: 3, max: 6 })
-//   books!: Book[];
-// }
-// class Book {
-//   @Fixture()
-//   title!: string;
-//   @Fixture({ type: () => [BookTag] })
-//   tags!: BookTag[];
-// }
-// class BookTag {
-//   @Fixture()
-//   label!: string;
-//   @Fixture({ type: () => BookTagCategory })
-//   category!: BookTagCategory;
-// }
-// class BookTagCategory {
-//   @Fixture()
-//   label!: string;
-// }
-// factory.register([Author, Book, BookTag, BookTagCategory, Address]);
-
-// const author = factory.make(Author).one();
-// console.log('author :', author);
-
-class User {
+class Address {
+  @Fixture()
+  city!: string;
+}
+class Author {
   @Fixture()
   name!: string;
-  @Fixture({ type: () => Book })
-  book!: Book;
+  @Fixture()
+  address!: Address;
+  @Fixture({ type: () => [Book], min: 3, max: 6 })
+  books!: Book[];
 }
-
 class Book {
   @Fixture()
   title!: string;
-  @Fixture({ type: () => Shelf })
-  shelf!: Shelf;
-  @Fixture({ type: () => User })
-  author!: User;
+  @Fixture({ type: () => [BookTag] })
+  tags!: BookTag[];
 }
-
-class Shelf {
+class BookTag {
   @Fixture()
-  owner!: User;
+  label!: string;
+  @Fixture({ type: () => BookTagCategory })
+  category!: BookTagCategory;
 }
+class BookTagCategory {
+  @Fixture()
+  label!: string;
+}
+factory.register([Author, Book, BookTag, BookTagCategory, Address]);
 
-factory.register([User, Book, Shelf]);
-
-const result = factory
-  .make(User, { maxDepthLevel: 1, reuseCircularRelationships: false })
-  .one();
-console.log('result :', inspect(result, { depth: Infinity, colors: true }));
+const author = factory.make(Author, { lazy: true }).one();
+console.log('author :', author);
