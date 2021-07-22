@@ -2,7 +2,10 @@ import { Class } from '../common/typings';
 import reflect, { PropertyReflection } from 'tinspector';
 import { FixtureOptions } from '../decorators/Fixture';
 import { getEnumValues } from '../common/utils';
-import { BaseMetadataAdapter } from './BaseMetadataAdapter';
+import {
+  BaseMetadataAdapter,
+  BasePropertyMetadata,
+} from './BaseMetadataAdapter';
 
 export interface ClassMetadata {
   name: string;
@@ -31,13 +34,13 @@ export interface PropertyMetadata {
 }
 
 export class MetadataStore {
-  private static adapter: BaseMetadataAdapter;
+  private static adapters: BaseMetadataAdapter[] = [];
   protected store: Record<string, ClassMetadata> = {};
 
   constructor(private readonly acceptPartialResult = false) {}
 
-  static setAdapter(adapter: BaseMetadataAdapter) {
-    MetadataStore.adapter = adapter;
+  static addAdapter(...adapters: BaseMetadataAdapter[]) {
+    MetadataStore.adapters.push(...adapters);
   }
 
   /**
@@ -55,55 +58,70 @@ export class MetadataStore {
    */
   make(classType: Class): ClassMetadata {
     const reflectMetadata = reflect(classType);
-    const adapterMetadata = MetadataStore.adapter
-      ? MetadataStore.adapter.makeOwnMetadata(classType)
-      : [];
+    /**
+     * Metadata from adapters
+     */
+    const adapterMetadata: ({
+      adapter: BaseMetadataAdapter;
+    } & BasePropertyMetadata)[] = [];
+    for (const adapter of MetadataStore.adapters) {
+      const meta = adapter.makeOwnMetadata(classType).filter(Boolean);
+      adapterMetadata.push(...meta.map(v => ({ adapter, ...v })));
+    }
 
     const unknownTypes = new Set<string>();
     /**
-     * First, get properties to generate from reflection
+     * Metadata from reflection
      */
-    let properties = reflectMetadata.properties
+    let reflectProps = reflectMetadata.properties
       .map(prop => this.makePropertyMetadata(prop)!)
       .filter(Boolean);
 
-    for (const reflectProp of properties) {
+    for (const reflectProp of reflectProps) {
       if (reflectProp?.ignore || !!reflectProp?.input) continue;
       if (!reflectProp.type) {
         unknownTypes.add(reflectProp.name);
       }
     }
 
+    const allPropNames = [
+      ...new Set([
+        ...adapterMetadata.map(v => v.propertyName),
+        ...reflectProps.map(v => v.name),
+      ]),
+    ];
+
     /**
      * Merge with the properties made from the adapter
      * Basically the property from the adapter takes precedence unless
      * the Fixture decorator is used to ignore the property or a force a given value
      */
-    for (const adapterMeta of adapterMetadata) {
-      const defaultProp = properties.find(
-        prop => prop.name === adapterMeta.propertyName
+    const finalProps: PropertyMetadata[] = [];
+    for (const propName of allPropNames) {
+      const reflectProp = reflectProps.find(prop => prop.name === propName);
+      if (reflectProp?.ignore || !!reflectProp?.input) {
+        finalProps.push(reflectProp);
+        continue;
+      }
+
+      const adapterProps = adapterMetadata.filter(
+        v => v.propertyName === propName
       );
-      if (defaultProp?.ignore || !!defaultProp?.input) continue;
-      const deducedProp = MetadataStore.adapter?.deduceMetadata?.(
-        defaultProp,
-        adapterMeta
-      );
-      if (deducedProp && deducedProp.type) {
-        if (defaultProp) {
-          properties = properties.map(prop =>
-            prop.name === adapterMeta.propertyName ? deducedProp : prop
-          );
-        } else {
-          properties.push(deducedProp);
-        }
-        unknownTypes.delete(adapterMeta.propertyName);
-      } else {
-        const typeResolved = !!properties.find(
-          v => v.name === adapterMeta.propertyName && !!v.type
+      const finalDeducedProp: PropertyMetadata = reflectProp || ({} as any);
+      for (const metaProp of adapterProps) {
+        const deducedProp = metaProp.adapter.deduceMetadata(
+          reflectProp,
+          metaProp
         );
-        if (!typeResolved) {
-          unknownTypes.add(adapterMeta.propertyName);
-        }
+        if (!deducedProp) continue;
+        Object.assign(finalDeducedProp, deducedProp);
+      }
+
+      finalProps.push(finalDeducedProp);
+      if (!finalDeducedProp.type) {
+        unknownTypes.add(propName);
+      } else {
+        unknownTypes.delete(propName);
       }
     }
 
@@ -117,7 +135,7 @@ export class MetadataStore {
 
     const classMetadata: ClassMetadata = {
       name: reflectMetadata.name,
-      properties: properties.filter(Boolean),
+      properties: finalProps,
     };
     return (this.store[classType.name] = classMetadata);
   }

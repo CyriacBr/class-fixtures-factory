@@ -1,6 +1,10 @@
 import { Class } from '../common';
 import { PropertyMetadata } from './MetadataStore';
 
+export interface BasePropertyMetadata {
+  propertyName: string;
+}
+
 /**
  * A class to extend to create a custom adapter.
  * An adapter has two goal:
@@ -8,7 +12,7 @@ import { PropertyMetadata } from './MetadataStore';
  * - to infer the correct metadata given the default metadata from reflection and the metadata made previously
  */
 export abstract class BaseMetadataAdapter<
-  MetadataType extends { propertyName: string } = { propertyName: string }
+  MetadataType extends BasePropertyMetadata = BasePropertyMetadata
 > {
   /**
    * Returns the metadata from the perspective of the adapter.
