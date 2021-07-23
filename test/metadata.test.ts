@@ -1,6 +1,8 @@
 import { MetadataStore } from '../src/metadata/MetadataStore';
 import { Fixture } from '../src/decorators/Fixture';
 import { ClassMetadata, PropertyMetadata } from '../src/metadata/MetadataStore';
+import { Field } from 'type-graphql';
+import { IsPositive } from 'class-validator';
 
 enum Mood {
   HAPPY,
@@ -195,6 +197,26 @@ describe('Metadata Store', () => {
       expect(() => store.make(Author)).toThrow(
         `Only pass class names to "type" in @Fixture({ type: () => Foo}) for "pet"`
       );
+    });
+
+    it(`metadata from different adapters are merged`, () => {
+      require('../src/plugins/class-validator');
+      require('../src/plugins/type-graphql');
+      class Dummy {
+        @Fixture({ max: 123456 })
+        @Field(_type => String)
+        @IsPositive()
+        val2!: any;
+      }
+
+      const metadata = store.make(Dummy).properties;
+      const propMeta = metadata.find(p => p.name === 'val2');
+
+      expect(propMeta).toMatchObject({
+        max: 123456,
+        type: 'string',
+        min: 1,
+      });
     });
   });
 });

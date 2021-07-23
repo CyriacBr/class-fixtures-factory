@@ -4,6 +4,7 @@ import faker from 'faker';
 import chalk from 'chalk';
 import { FactoryLogger } from './FactoryLogger';
 import { DeepKeyOf, DeepRequired } from 'utils/types';
+import { SECRET } from './internals';
 
 export interface FactoryOptions {
   logging?: boolean;
@@ -319,16 +320,21 @@ export class FixtureFactory {
           if (!prop) {
             throw new Error(`Couldn't generate lazily "${p}" of "${meta.name}`);
           }
-          return (target[p] = this.makeProperty(prop, meta, ctx));
+          let value = this.makeProperty(prop, meta, ctx);
+          value = prop.hooks?.[SECRET].afterValueGenerated?.(value) ?? value;
+          return (target[p] = value);
         },
       });
       ctx.pathReferences.push(proxy);
       return proxy;
     }
+
     ctx.pathReferences.push(object);
     for (const prop of meta.properties) {
       if (prop.ignore) continue;
-      this.assigner(prop, object, this.makeProperty(prop, meta, ctx));
+      let value = this.makeProperty(prop, meta, ctx);
+      value = prop.hooks?.[SECRET].afterValueGenerated?.(value) ?? value;
+      this.assigner(prop, object, value);
     }
     return object;
   }
@@ -352,6 +358,11 @@ export class FixtureFactory {
       }
     }
 
+    if (prop.hooks?.[SECRET].hasOverrodeValue()) {
+      const value = prop.hooks[SECRET].getValueOverride();
+      this.logger()?.onAdapterProp(prop, value);
+      return value;
+    }
     if (prop.input) {
       this.logger()?.onCustomProp(prop);
       return prop.input();
@@ -359,7 +370,7 @@ export class FixtureFactory {
     if (prop.array) {
       return this.makeArrayProp(prop, meta, ctx);
     } else if (prop.scalar) {
-      const value = prop.libraryInput?.() || this.makeScalarProperty(prop);
+      const value = this.makeScalarProperty(prop);
       this.logger()?.onNormalProp(prop, value);
       return value;
     }
@@ -367,20 +378,113 @@ export class FixtureFactory {
   }
 
   protected makeScalarProperty(prop: PropertyMetadata) {
-    if (prop.enum) {
-      if (prop.items) {
-        return faker.random.arrayElement(prop.items);
+    if (prop.items) {
+      return faker.random.arrayElement(prop.items);
+    }
+
+    let { min, max } = prop;
+    let numberMin: number | undefined, numberMax: number | undefined;
+
+    if (
+      (min != null && typeof min === 'number') ||
+      (max != null && typeof max === 'number')
+    ) {
+      numberMin = min != null && typeof min === 'number' ? min : 0;
+      numberMax = max != null && typeof max === 'number' ? max : 0;
+      if (!min) {
+        numberMin = numberMax > 0 ? 0 : numberMax - 1000;
+      } else if (!numberMax) {
+        numberMax = numberMin > 0 ? numberMin + 1000 : 0;
+      }
+      if (numberMin > numberMax) {
+        numberMax = numberMin + 1;
       }
     }
+
     switch (prop.type) {
-      case 'string':
-        return faker.random.word();
-      case 'number':
-        return faker.random.number();
+      case 'string': {
+        if (numberMin != null || numberMax != null) {
+          if (prop.hooks?.[SECRET].hasGenerateScalarCallback()) {
+            return prop.hooks[SECRET].onGenerateScalar(numberMin, numberMax);
+          }
+          const ln = faker.random.number({ min: numberMin, max: numberMax });
+          let value = '';
+          while (value.length < ln) {
+            value += faker.random.word();
+          }
+          value = value.slice(0, ln);
+          return value;
+        }
+        return (
+          prop.hooks?.[SECRET].onGenerateScalar?.(undefined, undefined) ??
+          faker.random.word()
+        );
+      }
+      case 'alphanumeric': {
+        if (numberMin != null || numberMax != null) {
+          if (prop.hooks?.[SECRET].hasGenerateScalarCallback()) {
+            return prop.hooks[SECRET].onGenerateScalar(numberMin, numberMax);
+          }
+          const ln = faker.random.number({ min: numberMin, max: numberMax });
+          return faker.random.alphaNumeric(ln);
+        }
+        return (
+          prop.hooks?.[SECRET].onGenerateScalar?.(undefined, undefined) ??
+          faker.random.alphaNumeric()
+        );
+      }
+      case 'number': {
+        if (numberMin != null || numberMax != null) {
+          return (
+            prop.hooks?.[SECRET].onGenerateScalar?.(numberMin, numberMax) ??
+            faker.random.number({
+              min: numberMin,
+              max: numberMax,
+            })
+          );
+        }
+        return (
+          prop.hooks?.[SECRET].onGenerateScalar?.(undefined, undefined) ??
+          faker.random.number()
+        );
+      }
       case 'boolean':
-        return faker.random.boolean();
-      case 'Date':
-        return faker.date.recent();
+        return (
+          prop.hooks?.[SECRET].onGenerateScalar?.(undefined, undefined) ??
+          faker.random.boolean()
+        );
+      case 'date':
+      case 'Date': {
+        if (
+          (min != null && min instanceof Date) ||
+          (max != null && max instanceof Date)
+        ) {
+          if (prop.hooks?.[SECRET].hasGenerateScalarCallback()) {
+            return prop.hooks[SECRET].onGenerateScalar(min, max);
+          }
+          const dateMin = min != null && min instanceof Date ? min : null;
+          const dateMax = max != null && max instanceof Date ? max : null;
+          let value: Date;
+          if (dateMin) {
+            value = faker.date.between(
+              dateMin,
+              dateMax || faker.date.future(1, dateMin)
+            );
+          } else if (dateMax) {
+            value = faker.date.between(
+              dateMin || faker.date.past(1, dateMax),
+              dateMax
+            );
+          } else {
+            value = faker.date.recent();
+          }
+          return value;
+        }
+        return (
+          prop.hooks?.[SECRET].onGenerateScalar?.(undefined, undefined) ??
+          faker.date.recent()
+        );
+      }
       default:
         break;
     }
@@ -393,8 +497,8 @@ export class FixtureFactory {
     ctx: FactoryContext
   ) {
     const amount = faker.random.number({
-      max: prop.max ?? 3,
-      min: prop.min ?? 1,
+      max: typeof prop.max === 'number' ? prop.max : 3,
+      min: typeof prop.min === 'number' ? prop.min : 1,
     });
     const scalar = ['string', 'number', 'boolean', 'Date'].includes(prop.type);
     return [...Array(amount).keys()]

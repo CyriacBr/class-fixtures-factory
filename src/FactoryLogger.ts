@@ -59,9 +59,9 @@ export class FactoryLogger {
     this.tree[name] = value;
   }
 
-  onClassValidator(prop: PropertyMetadata, value: any) {
+  onAdapterProp(prop: PropertyMetadata, _value: any) {
     const name = chalk.cyan(prop.name);
-    this.tree[name] = `${chalk.gray('class-validator]')} ${value}`;
+    this.tree[name] = `${chalk.gray('[adapter]')}`;
   }
 
   onReusedProp(prop: PropertyMetadata) {

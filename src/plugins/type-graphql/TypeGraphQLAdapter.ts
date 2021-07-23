@@ -5,6 +5,7 @@ import { FieldMetadata as BaseFieldMetadata } from 'type-graphql/dist/metadata/d
 import { Class } from '../..';
 import faker from 'faker';
 import { MetadataStorage } from 'type-graphql/dist/metadata/metadata-storage';
+import { FactoryHooks } from '../../FactoryHooks';
 
 interface FieldMetadata extends BaseFieldMetadata {
   propertyName: string;
@@ -29,13 +30,12 @@ export class TypeGraphQLAdapter extends BaseMetadataAdapter<FieldMetadata> {
   }
 
   deduceMetadata(
-    defaultProp: PropertyMetadata | undefined,
-    ownProp: FieldMetadata
-  ): PropertyMetadata | null {
-    const prop: PropertyMetadata = {
+    reflectProp: Readonly<PropertyMetadata> | undefined,
+    ownProp: Readonly<FieldMetadata>,
+    propHooks: FactoryHooks
+  ): Partial<PropertyMetadata> {
+    const prop: Partial<PropertyMetadata> = {
       name: ownProp.propertyName,
-      type: '',
-      ...(defaultProp || {}),
     };
 
     const gqlType = ownProp.getType();
@@ -44,10 +44,10 @@ export class TypeGraphQLAdapter extends BaseMetadataAdapter<FieldMetadata> {
 
     switch (gqlType) {
       case ID:
+        propHooks.setOnGenerateScalar(() => faker.random.uuid());
         return {
           ...prop,
           type: 'string',
-          libraryInput: () => faker.random.uuid(),
         };
       case Int:
       case Number:
@@ -56,13 +56,14 @@ export class TypeGraphQLAdapter extends BaseMetadataAdapter<FieldMetadata> {
           type: 'number',
         };
       case Float:
+        propHooks.setOnGenerateScalar(() =>
+          faker.random.number({
+            precision: 0.01,
+          })
+        );
         return {
           ...prop,
           type: 'number',
-          libraryInput: () =>
-            faker.random.number({
-              precision: 0.01,
-            }),
         };
       case Boolean:
         return {
@@ -85,7 +86,7 @@ export class TypeGraphQLAdapter extends BaseMetadataAdapter<FieldMetadata> {
         break;
     }
 
-    if (gqlType instanceof GraphQLScalarType && !defaultProp?.type) {
+    if (gqlType instanceof GraphQLScalarType && !reflectProp?.type) {
       throw new Error(
         `Can't generate a value for custom TypeGraphQL scalar type "${gqlType.name}"`
       );
@@ -95,36 +96,33 @@ export class TypeGraphQLAdapter extends BaseMetadataAdapter<FieldMetadata> {
       v => JSON.stringify(v.enumObj) === JSON.stringify(gqlType)
     );
     if (isEnum) {
+      /**
+       * Generate a random value within the string values of a registered enum
+       * With gqlType as
+       * {
+       *  '0': 'UP',
+       *  '1': 'DOWN',
+       *  '2': 'LEFT',
+       *  '3': 'RIGHT',
+       *  UP: 0,
+       *  DOWN: 1,
+       *  LEFT: 2,
+       *  RIGHT: 3
+       *  }
+       * generates a value between 'UP', 'DOWN', 'LEFT' and 'RIGHT
+       */
+      propHooks.setOnGenerateScalar(() =>
+        faker.random.arrayElement(
+          Object.entries(gqlType as Record<string, string | number>)
+            .filter(([_, value]) => typeof value === 'string')
+            .map(([_, value]) => value)
+        )
+      );
       return {
         ...prop,
         type: 'string',
         scalar: true,
-        /**
-         * Generate a random value within the string values of a registered enum
-         * With gqlType as
-         * {
-         *  '0': 'UP',
-         *  '1': 'DOWN',
-         *  '2': 'LEFT',
-         *  '3': 'RIGHT',
-         *  UP: 0,
-         *  DOWN: 1,
-         *  LEFT: 2,
-         *  RIGHT: 3
-         *  }
-         * generates a value between 'UP', 'DOWN', 'LEFT' and 'RIGHT
-         */
-        libraryInput: () =>
-          faker.random.arrayElement(
-            Object.entries(gqlType as Record<string, string | number>)
-              .filter(([_, value]) => typeof value === 'string')
-              .map(([_, value]) => value)
-          ),
       };
-    }
-
-    if (!prop.type) {
-      return null;
     }
 
     return prop;

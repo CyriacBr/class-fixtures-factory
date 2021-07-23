@@ -2,14 +2,16 @@ import { decorate } from 'tinspector';
 
 export type FixtureOptions =
   | string
+  // eslint-disable-next-line no-undef
   | ((faker: Faker.FakerStatic) => string | undefined)
   | (() => any)
   | {
       type?: () => object;
       ignore?: boolean;
       enum?: object;
-      min?: number;
-      max?: number;
+      min?: number | Date;
+      max?: number | Date;
+      // eslint-disable-next-line no-undef
       get?: ((faker: Faker.FakerStatic) => string | undefined) | (() => any);
     };
 

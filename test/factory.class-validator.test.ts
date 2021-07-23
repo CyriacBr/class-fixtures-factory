@@ -72,6 +72,7 @@ describe(`FixtureFactory`, () => {
     it(`@IsIn()`, () => {
       class Dummy {
         @IsIn(['a', 'b', 'c'])
+        @Fixture({ type: () => String })
         val!: string;
       }
       factory.register([Dummy]);
@@ -83,6 +84,7 @@ describe(`FixtureFactory`, () => {
     it(`@Equals()`, () => {
       class Dummy {
         @Equals('foo')
+        @Fixture({ type: () => String })
         val!: string;
       }
       factory.register([Dummy]);
@@ -283,7 +285,8 @@ describe(`FixtureFactory`, () => {
     it(`@ArrayContains() `, () => {
       class Dummy {
         @ArrayContains([1, 2])
-        val!: any[];
+        @Fixture({ type: () => [Number] })
+        val!: number[];
       }
       factory.register([Dummy]);
 
@@ -370,6 +373,20 @@ describe(`FixtureFactory`, () => {
 
         const dummy = factory.make(Dummy).one();
         expect(typeof dummy.val).toBe('string');
+      });
+
+      it(`@Minlength and @MaxLength with @IsString`, () => {
+        class Dummy {
+          @IsString()
+          @MinLength(50)
+          @MaxLength(50)
+          val!: string;
+        }
+        factory.register([Dummy]);
+
+        const dummy = factory.make(Dummy).one();
+        expect(typeof dummy.val).toBe('string');
+        expect(dummy.val.length).toBe(50);
       });
     });
   });

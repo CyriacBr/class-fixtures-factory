@@ -6,6 +6,7 @@ import {
   BaseMetadataAdapter,
   BasePropertyMetadata,
 } from './BaseMetadataAdapter';
+import { FactoryHooks } from '../FactoryHooks';
 
 export interface ClassMetadata {
   name: string;
@@ -20,17 +21,13 @@ export interface PropertyMetadata {
   items?: any[];
   array?: boolean;
   ignore?: boolean;
-  min?: number;
-  max?: number;
+  min?: number | Date;
+  max?: number | Date;
   /**
    * A value that completely bypass everything and sets the generate value equals to its own
    */
   input?: (...args: any[]) => any;
-  /**
-   * An input provided by the internals or a provider to generate scalars
-   */
-  libraryInput?: (...args: any[]) => any;
-  typeFromDecorator?: boolean;
+  hooks?: FactoryHooks;
 }
 
 export class MetadataStore {
@@ -104,19 +101,22 @@ export class MetadataStore {
         continue;
       }
 
+      const propHooks = new FactoryHooks();
       const adapterProps = adapterMetadata.filter(
         v => v.propertyName === propName
       );
       const finalDeducedProp: PropertyMetadata = reflectProp || ({} as any);
       for (const metaProp of adapterProps) {
         const deducedProp = metaProp.adapter.deduceMetadata(
-          reflectProp,
-          metaProp
+          reflectProp ? Object.freeze({ ...reflectProp }) : undefined,
+          Object.freeze({ ...metaProp }),
+          propHooks
         );
         if (!deducedProp) continue;
         Object.assign(finalDeducedProp, deducedProp);
       }
 
+      finalDeducedProp.hooks = propHooks;
       finalProps.push(finalDeducedProp);
       if (!finalDeducedProp.type) {
         unknownTypes.add(propName);
@@ -162,11 +162,23 @@ export class MetadataStore {
           } as PropertyMetadata;
         }
         meta.input = decorator.get;
-        meta.min = decorator.min || 1;
-        meta.max = Math.max(decorator.max || 3, meta.min);
+        if (
+          typeof decorator.min === 'number' ||
+          typeof decorator.max === 'number'
+        ) {
+          meta.min =
+            decorator.min && typeof decorator.min === 'number'
+              ? decorator.min
+              : 1;
+          meta.max = Math.max(
+            decorator.max && typeof decorator.max === 'number'
+              ? decorator.max
+              : 3,
+            meta.min
+          );
+        }
         let inputType: any = decorator.type?.();
         if (inputType) {
-          meta.typeFromDecorator = true;
           if (Array.isArray(inputType)) {
             inputType = inputType[0];
             meta.array = true;

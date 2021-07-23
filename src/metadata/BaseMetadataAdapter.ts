@@ -1,3 +1,4 @@
+import { FactoryHooks } from 'FactoryHooks';
 import { Class } from '../common';
 import { PropertyMetadata } from './MetadataStore';
 
@@ -23,11 +24,12 @@ export abstract class BaseMetadataAdapter<
    * When a metadata from reflection exists and this adapter also proposed
    * its own metadata, this method needs to resolve this conflict and return
    * the correct metadata to infer
-   * @param defaultProp default metadata constructed from reflection by the library, this can be undefined
+   * @param reflectProp default metadata constructed from reflection by the library, this can be undefined
    * @param ownProp the metadata this adapter made from makeMetadata
    */
   abstract deduceMetadata(
-    defaultProp: PropertyMetadata | undefined,
-    ownProp: MetadataType
-  ): PropertyMetadata | null;
+    reflectProp: Readonly<PropertyMetadata> | undefined,
+    ownProp: Readonly<MetadataType>,
+    propHooks: FactoryHooks
+  ): Partial<PropertyMetadata>;
 }

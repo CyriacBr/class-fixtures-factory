@@ -4,15 +4,7 @@ import faker from 'faker';
 import { PropertyMetadata } from '../../metadata';
 import { Class } from '../..';
 import { BaseMetadataAdapter } from '../../metadata/BaseMetadataAdapter';
-
-interface WorkingData {
-  type?: 'number' | 'decimal' | 'date' | 'alpha' | 'alphanumeric' | 'array';
-  min?: number | Date;
-  max?: number | Date;
-  case?: 'lower' | 'upper';
-  options?: any;
-}
-
+import { FactoryHooks } from 'FactoryHooks';
 export class ClassValidatorAdapter extends BaseMetadataAdapter<
   ValidationMetadata
 > {
@@ -24,289 +16,194 @@ export class ClassValidatorAdapter extends BaseMetadataAdapter<
   }
 
   deduceMetadata(
-    defaultProp: PropertyMetadata | undefined,
-    cvMeta: ValidationMetadata
-  ): PropertyMetadata | null {
-    const prop: PropertyMetadata = {
+    _reflectProp: Readonly<PropertyMetadata> | undefined,
+    cvMeta: Readonly<ValidationMetadata>,
+    propHooks: FactoryHooks
+  ): Partial<PropertyMetadata> {
+    const prop: Partial<PropertyMetadata> = {
       name: cvMeta.propertyName,
-      type: '',
-      ...(defaultProp || {}),
-    };
-    const data: WorkingData = {
-      type: null as any,
-      max: null as any,
-      min: null as any,
     };
 
     switch (cvMeta.type) {
-      case 'isBoolean': {
-        return {
-          ...prop,
-          type: prop.type || 'boolean',
-          input: () => faker.random.boolean(),
-        };
-      }
+      case 'isBoolean':
+        prop.type = 'boolean';
+        prop.scalar = true;
+        break;
       case 'isDate': {
-        data.type = 'date';
+        prop.type = 'date';
+        prop.scalar = true;
         break;
       }
       case 'isString': {
-        data.type = 'alpha';
+        prop.type = 'string';
+        prop.scalar = true;
         break;
       }
       case 'isNumber':
       case 'isInt':
       case 'isNumberString': {
-        data.type = 'number';
+        prop.type = 'number';
+        prop.scalar = true;
         break;
       }
       case 'isIn': {
         const items = cvMeta.constraints[0];
         return {
           ...prop,
-          type: prop.type || 'any',
-          input: () => faker.random.arrayElement(items),
+          items,
         };
       }
       case 'equals':
-        return {
-          ...prop,
-          type: prop.type || 'any',
-          input: () => cvMeta.constraints[0],
-        };
+        propHooks.setOverride(() => cvMeta.constraints[0]);
+        break;
       case 'isEmpty':
-        return {
-          ...prop,
-          type: prop.type || 'any',
-          input: () => null,
-        };
+        propHooks.setOverride(() => null);
+        break;
       case 'isPositive':
-        data.type = 'number';
-        data.min = 1;
+        prop.type = 'number';
+        prop.min = 1;
+        prop.scalar = true;
         break;
       case 'isNegative':
-        data.type = 'number';
-        data.max = -1;
+        prop.type = 'number';
+        prop.max = -1;
+        prop.scalar = true;
         break;
       case 'min': {
-        const value = cvMeta.constraints[0];
-        data.type = 'number';
-        data.min = value;
+        const value: number = cvMeta.constraints[0];
+        prop.type = 'number';
+        prop.scalar = true;
+        prop.min = value;
         break;
       }
       case 'max': {
-        const value = cvMeta.constraints[0];
-        data.type = 'number';
-        data.max = value;
+        const value: number = cvMeta.constraints[0];
+        prop.type = 'number';
+        prop.scalar = true;
+        prop.max = value;
         break;
       }
       case 'minDate': {
-        const value = cvMeta.constraints[0];
-        data.type = 'date';
-        data.min = value;
+        const value: Date = cvMeta.constraints[0];
+        prop.type = 'date';
+        prop.scalar = true;
+        prop.min = value;
         break;
       }
       case 'maxDate': {
-        const value = cvMeta.constraints[0];
-        data.type = 'date';
-        data.max = value;
+        const value: Date = cvMeta.constraints[0];
+        prop.type = 'date';
+        prop.scalar = true;
+        prop.max = value;
         break;
       }
       case 'contains': {
         const value = cvMeta.constraints[0];
-        return {
-          ...prop,
-          type: prop.type || 'any',
-          input: () => `${faker.random.word()}${value}${faker.random.word()}`,
-        };
+        propHooks.setOnGenerateScalar((_min?: number, _max?: number) => {
+          // TODO: support min/max
+          return `${faker.random.word()}${value}${faker.random.word()}`;
+        });
+        prop.type = 'string';
+        prop.scalar = true;
+        break;
       }
       case 'isAlpha':
-        data.type = 'alpha';
+        propHooks.addAfterValueGenerated((value: string) =>
+          value.replace(/\d/g, faker.random.word()[0])
+        );
+        prop.type = 'string';
+        prop.scalar = true;
         break;
       case 'isAlphanumeric':
-        data.type = 'alphanumeric';
+        prop.type = 'alphanumeric';
+        prop.scalar = true;
         break;
-      case 'isDecimal':
-        data.options = cvMeta.constraints[0];
-        data.type = 'decimal';
+      case 'isDecimal': {
+        const data = cvMeta.constraints[0];
+        prop.type = 'decimal';
+        prop.scalar = true;
+        propHooks.setOnGenerateScalar((min?: number, max?: number) => {
+          const digits = Number(data.decimal_digits || '1');
+          return parseFloat(faker.finance.amount(min, max, digits));
+        });
         break;
+      }
       case 'isEmail':
+        propHooks.setOverride(() => faker.internet.email());
         return {
           ...prop,
           type: 'string',
-          input: () => faker.internet.email(),
+          scalar: true,
         };
       case 'isFqdn':
+        propHooks.setOverride(() => faker.internet.domainName());
         return {
           ...prop,
           type: 'string',
-          input: () => faker.internet.domainName(),
+          scalar: true,
         };
       case 'isHexColor':
+        propHooks.setOverride(() => faker.internet.color());
         return {
           ...prop,
           type: 'string',
-          input: () => faker.internet.color(),
+          scalar: true,
         };
       case 'isLowercase':
-        data.type = 'alpha';
-        data.case = 'lower';
+        prop.type = 'string';
+        prop.scalar = true;
+        propHooks.addAfterValueGenerated((value: string) =>
+          value.toLowerCase()
+        );
         break;
       case 'isUppercase':
-        data.type = 'alpha';
-        data.case = 'upper';
+        prop.type = 'string';
+        prop.scalar = true;
+        propHooks.addAfterValueGenerated((value: string) =>
+          value.toUpperCase()
+        );
         break;
       case 'length': {
-        const [min, max] = cvMeta.constraints;
-        data.min = min;
-        data.max = max || 6;
-        data.type = 'alpha';
+        const [min, max] = cvMeta.constraints as [number, number];
+        prop.min = min;
+        prop.max = max;
+        prop.type = 'string';
+        prop.scalar = true;
         break;
       }
       case 'minLength': {
-        const value = cvMeta.constraints[0];
-        data.min = value;
-        data.type = 'alpha';
+        const value: number = cvMeta.constraints[0];
+        prop.min = value;
+        prop.type = 'string';
+        prop.scalar = true;
         break;
       }
       case 'maxLength': {
-        const value = cvMeta.constraints[0];
-        data.max = value;
-        data.type = 'alpha';
+        const value: number = cvMeta.constraints[0];
+        prop.max = value;
+        prop.type = 'string';
+        prop.scalar = true;
         break;
       }
       case 'arrayContains': {
-        const value = cvMeta.constraints[0];
+        propHooks.setOverride(() => cvMeta.constraints[0]);
         return {
           ...prop,
-          type: 'string',
-          input: () => value,
+          array: true,
         };
       }
       case 'arrayMinSize': {
-        const value = cvMeta.constraints[0];
-        data.type = 'array';
-        data.min = value;
+        const value: number = cvMeta.constraints[0];
+        prop.array = true;
+        prop.min = value;
         break;
       }
       case 'arrayMaxSize': {
-        const value = cvMeta.constraints[0];
-        data.type = 'array';
-        data.max = value;
+        const value: number = cvMeta.constraints[0];
+        prop.array = true;
+        prop.max = value;
         break;
       }
-    }
-
-    if (typeof data.max === 'number' && !data.min) {
-      data.min = data.max - 1;
-    } else if (typeof data.min === 'number' && !data.max) {
-      data.max = data.min + 1;
-    }
-    if (
-      typeof data.max === 'number' &&
-      typeof data.min === 'number' &&
-      data.min > data.max
-    ) {
-      data.max = data.min + 1;
-    }
-
-    switch (data.type) {
-      case 'number': {
-        const min = data.min as number;
-        const max = data.max as number;
-        const sign = max < 0 ? -1 : 1;
-        let value =
-          sign *
-          faker.random.number({
-            min: Math.abs(min || sign),
-            max: Math.abs(max || 10000),
-          });
-        return {
-          ...prop,
-          type: 'number',
-          input: () => value,
-        };
-      }
-      case 'decimal': {
-        const min = data.min as number;
-        const max = data.max as number;
-        const digits = Number(data.options.decimal_digits || '1');
-        const sign = max < 0 ? -1 : 1;
-        let value =
-          sign *
-          parseFloat(
-            faker.finance.amount(
-              Math.abs(min || sign),
-              Math.abs(max || 10000),
-              digits
-            )
-          );
-        return {
-          ...prop,
-          type: 'number',
-          input: () => value,
-        };
-      }
-      case 'date': {
-        const min = data.min as Date;
-        const max = data.max as Date;
-        let value: Date;
-        if (min) {
-          value = faker.date.between(min, max || faker.date.future(1, min));
-        } else if (max) {
-          value = faker.date.between(min || faker.date.past(1, max), max);
-        } else {
-          value = faker.date.recent();
-        }
-        return {
-          ...prop,
-          type: 'Date',
-          input: () => value,
-        };
-      }
-      case 'alpha': {
-        const min = data.min as number;
-        const max = data.max as number;
-        const ln = faker.random.number({ min: min || 5, max: max || 10 });
-        const value = faker.lorem
-          .sentence(100)
-          .substr(0, ln)
-          [data.case === 'lower' ? 'toLowerCase' : 'toUpperCase']();
-        return {
-          ...prop,
-          type: 'string',
-          input: () => value,
-        };
-      }
-      case 'alphanumeric': {
-        const min = data.min as number;
-        const max = data.max as number;
-        const ln = faker.random.number({ min: min || 5, max: max || 10 });
-        return {
-          ...prop,
-          type: 'string',
-          input: () =>
-            faker.random
-              .alphaNumeric(ln)
-              [data.case === 'lower' ? 'toLowerCase' : 'toUpperCase'](),
-        };
-      }
-      case 'array': {
-        if (!prop.type) {
-          throw new Error(
-            `The type of "${cvMeta.propertyName}" seems to be an array. Use @Fixture({ type: () => Foo })`
-          );
-        }
-        return {
-          ...prop,
-          max: (data.max as number) || prop.max,
-          min: (data.min as number) || prop.min,
-        };
-      }
-    }
-
-    if (!prop.type) {
-      return null;
     }
 
     return prop;
