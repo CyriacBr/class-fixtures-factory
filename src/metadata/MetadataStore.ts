@@ -7,6 +7,8 @@ import {
   BasePropertyMetadata,
 } from './BaseMetadataAdapter';
 import { FactoryHooks } from '../FactoryHooks';
+import { DeepRequired } from '../utils';
+import { FactoryOptions } from '..';
 
 export interface ClassMetadata {
   name: string;
@@ -53,7 +55,10 @@ export class MetadataStore {
   /**
    * Make type metadata for a class
    */
-  make(classType: Class): ClassMetadata {
+  make(
+    classType: Class,
+    options?: DeepRequired<FactoryOptions>
+  ): ClassMetadata {
     const reflectMetadata = reflect(classType);
     /**
      * Metadata from adapters
@@ -62,7 +67,7 @@ export class MetadataStore {
       adapter: BaseMetadataAdapter;
     } & BasePropertyMetadata)[] = [];
     for (const adapter of MetadataStore.adapters) {
-      const meta = adapter.makeOwnMetadata(classType).filter(Boolean);
+      const meta = adapter.makeOwnMetadata(classType, options).filter(Boolean);
       adapterMetadata.push(...meta.map(v => ({ adapter, ...v })));
     }
 

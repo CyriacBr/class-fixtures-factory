@@ -1,5 +1,7 @@
 import { FactoryHooks } from 'FactoryHooks';
+import { FactoryOptions } from '..';
 import { Class } from '../common';
+import { DeepRequired } from '../utils';
 import { PropertyMetadata } from './MetadataStore';
 
 export interface BasePropertyMetadata {
@@ -18,7 +20,10 @@ export abstract class BaseMetadataAdapter<
   /**
    * Returns the metadata from the perspective of the adapter.
    */
-  abstract makeOwnMetadata(classType: Class): MetadataType[];
+  abstract makeOwnMetadata(
+    classType: Class,
+    options?: DeepRequired<FactoryOptions>
+  ): MetadataType[];
 
   /**
    * When a metadata from reflection exists and this adapter also proposed

@@ -6,18 +6,6 @@ import { FactoryLogger } from './FactoryLogger';
 import { DeepKeyOf, DeepRequired } from 'utils/types';
 import { SECRET } from './internals';
 
-export interface FactoryOptions {
-  logging?: boolean;
-  /**
-   * Defines wether properties are generated on demand,
-   * or eagerly. If this option is true, generated instances
-   * will be wrapped with a `Proxy`
-   *
-   * This overrides the `lazy` option from factory.make()
-   */
-  lazy?: boolean;
-}
-
 export interface FactoryResult<T> {
   one: () => T;
   many: (x: number) => T[];
@@ -49,7 +37,8 @@ export type Assigner = (
   value: any
 ) => void;
 
-export interface FactoryMakeOptions {
+export interface FactoryOptions {
+  logging?: boolean;
   /**
    * Defines how deep relationships should be generated.
    * With a level of 0, no relationships are generated at all
@@ -115,7 +104,7 @@ export interface FactoryMakeOptions {
 
 export interface FactoryContext {
   depthLevel: number;
-  options: DeepRequired<FactoryMakeOptions>;
+  options: DeepRequired<FactoryOptions>;
   path: string[];
   pathReferences: InstanceType<Class>[];
   startDate: Date;
@@ -126,31 +115,32 @@ export interface FactoryContext {
 export class FixtureFactory {
   private store = new MetadataStore();
   private classTypes: Record<string, Class> = {};
-  private DEFAULT_OPTIONS: FactoryOptions = {
+  private options!: DeepRequired<FactoryOptions>;
+  private loggers: FactoryLogger[] = [];
+  private assigner: Assigner = this.defaultAssigner.bind(this);
+
+  private static DEFAULT_OPTIONS: DeepRequired<FactoryOptions> = {
     logging: false,
-    lazy: false,
-  };
-  private DEFAULT_MAKE_OPTIONS: DeepRequired<FactoryMakeOptions> = {
     maxDepthLevel: 100,
     maxOccurrencesPerPath: 1,
     reuseCircularRelationships: true,
     timeout: 3,
     lazy: false,
   };
-  private options!: FactoryOptions;
-  private loggers: FactoryLogger[] = [];
-  private assigner: Assigner = this.defaultAssigner.bind(this);
+  static registerFactoryOptions(opts: Record<string, any>) {
+    Object.assign(FixtureFactory.DEFAULT_OPTIONS, opts);
+  }
 
   constructor(options?: FactoryOptions) {
     this.options = {
-      ...this.DEFAULT_OPTIONS,
+      ...FixtureFactory.DEFAULT_OPTIONS,
       ...(options || {}),
     };
   }
 
   setOptions(options: FactoryOptions) {
     this.options = {
-      ...this.DEFAULT_OPTIONS,
+      ...FixtureFactory.DEFAULT_OPTIONS,
       ...(options || {}),
     };
   }
@@ -216,7 +206,7 @@ export class FixtureFactory {
    */
   register(classTypes: Class[]) {
     for (const classType of classTypes) {
-      this.store.make(classType);
+      this.store.make(classType, this.options);
       this.classTypes[classType.name] = classType;
     }
   }
@@ -227,15 +217,12 @@ export class FixtureFactory {
    */
   make<T extends Class>(
     classType: T,
-    options: FactoryMakeOptions = {}
+    options: FactoryOptions = {}
   ): FactoryResult<InstanceType<T>> {
-    const ctxOptions: DeepRequired<FactoryMakeOptions> = {
-      ...this.DEFAULT_MAKE_OPTIONS,
+    const ctxOptions: DeepRequired<FactoryOptions> = {
+      ...this.options,
       ...(options || {}),
     };
-    if (this.options.lazy) {
-      ctxOptions.lazy = true;
-    }
 
     if (
       ctxOptions.maxDepthLevel === Infinity &&
@@ -246,7 +233,8 @@ export class FixtureFactory {
       );
     }
 
-    this.store.make(classType);
+    // TODO: Not needed? Or remake all registered classTypes with ctxOptions?
+    this.store.make(classType, ctxOptions);
     const meta = this.store.get(classType);
     const ctx: FactoryContext = {
       depthLevel: 0,
