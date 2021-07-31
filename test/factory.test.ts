@@ -203,6 +203,30 @@ describe(`FixtureFactory`, () => {
       expect(typeof person.age).toBe('number');
     });
 
+    it(`number with min and max`, () => {
+      class Person {
+        @Fixture({ min: 800, max: 1000 })
+        age!: number;
+      }
+      factory.register([Person]);
+
+      const person = factory.make(Person).one();
+      expect(typeof person.age).toBe('number');
+      expect(person.age >= 800 && person.age <= 1000).toBe(true);
+    });
+
+    it(`number with precision`, () => {
+      class Person {
+        @Fixture({ precision: 4, min: 1000, max: 1000.9999 })
+        age!: number;
+      }
+      factory.register([Person]);
+
+      const person = factory.make(Person).one();
+      expect(typeof person.age).toBe('number');
+      expect(person.age >= 1000.0001 && person.age <= 1000.9999).toBe(true);
+    });
+
     it(`boolean`, () => {
       class Person {
         @Fixture()

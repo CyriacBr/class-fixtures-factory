@@ -29,6 +29,10 @@ describe('Metadata Store', () => {
       fullName!: string;
       @Fixture()
       age!: number;
+      @Fixture({ precision: 2 })
+      ageInDecimal!: number;
+      @Fixture({ min: 2, max: 999 }) // these days you need more than one job to get through life...
+      nbrJobs!: number;
       @Fixture()
       awarded!: boolean;
       @Fixture({ enum: Mood })
@@ -109,6 +113,27 @@ describe('Metadata Store', () => {
 
       expect(ageProp).toMatchObject({
         type: 'number',
+      } as PropertyMetadata);
+    });
+
+    it(`number with min and max`, () => {
+      const nbrJobsProp = metadata.properties.find(p => p.name === 'nbrJobs');
+
+      expect(nbrJobsProp).toMatchObject({
+        type: 'number',
+        min: 2,
+        max: 999,
+      } as PropertyMetadata);
+    });
+
+    it(`number with precision`, () => {
+      const ageInDecimalProp = metadata.properties.find(
+        p => p.name === 'ageInDecimal'
+      );
+
+      expect(ageInDecimalProp).toMatchObject({
+        type: 'number',
+        precision: 2,
       } as PropertyMetadata);
     });
 

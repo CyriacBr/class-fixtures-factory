@@ -11,6 +11,7 @@ export type FixtureOptions =
       enum?: object;
       min?: number | Date;
       max?: number | Date;
+      precision?: number;
       // eslint-disable-next-line no-undef
       get?: ((faker: Faker.FakerStatic) => string | undefined) | (() => any);
     };

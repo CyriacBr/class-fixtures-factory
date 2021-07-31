@@ -424,10 +424,15 @@ export class FixtureFactory {
       case 'number': {
         if (numberMin != null || numberMax != null) {
           return (
-            prop.hooks?.[SECRET].onGenerateScalar?.(numberMin, numberMax) ??
+            prop.hooks?.[SECRET].onGenerateScalar?.(
+              numberMin,
+              numberMax,
+              prop.precision
+            ) ??
             faker.random.number({
               min: numberMin,
               max: numberMax,
+              precision: prop.precision ? prop.precision / 100 : undefined,
             })
           );
         }

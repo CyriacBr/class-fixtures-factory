@@ -25,6 +25,7 @@ export interface PropertyMetadata {
   ignore?: boolean;
   min?: number | Date;
   max?: number | Date;
+  precision?: number;
   /**
    * A value that completely bypass everything and sets the generate value equals to its own
    */
@@ -182,6 +183,7 @@ export class MetadataStore {
             meta.min
           );
         }
+        meta.precision = decorator.precision;
         let inputType: any = decorator.type?.();
         if (inputType) {
           if (Array.isArray(inputType)) {

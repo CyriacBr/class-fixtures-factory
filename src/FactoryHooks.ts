@@ -3,7 +3,11 @@ import { SECRET } from './internals';
 export class FactoryHooks {
   constructor(private allowWarnings = true) {}
   private afterValueGeneratedCallbacks: ((value: any) => any)[] = [];
-  private onGenerateScalar!: <T extends number | Date>(min?: T, max?: T) => any;
+  private onGenerateScalar!: <T extends number | Date>(
+    min?: T,
+    max?: T,
+    precision?: number
+  ) => any;
   private valueOverride!: () => any;
 
   /**
@@ -43,8 +47,12 @@ export class FactoryHooks {
     getValueOverride: () => this.valueOverride?.(),
 
     hasGenerateScalarCallback: () => this.onGenerateScalar !== undefined,
-    onGenerateScalar: (min?: number | Date, max?: number | Date) => {
-      return this.onGenerateScalar?.(min, max);
+    onGenerateScalar: (
+      min?: number | Date,
+      max?: number | Date,
+      precision?: number
+    ) => {
+      return this.onGenerateScalar?.(min, max, precision);
     },
     afterValueGenerated: (value: any) => {
       for (const cb of this.afterValueGeneratedCallbacks) {
