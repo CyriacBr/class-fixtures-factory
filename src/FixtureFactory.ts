@@ -100,6 +100,14 @@ export interface FactoryOptions {
    * will be wrapped with a `Proxy`
    */
   lazy?: boolean;
+  /**
+   * When an error arise when an object is being generated, the factory can either
+   * return a partial result (with the previously successfully generated props only) or throw the error.
+   *
+   * false by default.
+   * Note that when true, an error during generation will NOT throw.
+   */
+  partialResultOnError?: boolean;
 }
 
 export interface FactoryContext {
@@ -128,6 +136,7 @@ export class FixtureFactory {
     reuseCircularRelationships: true,
     timeout: 3,
     lazy: false,
+    partialResultOnError: false,
   };
   static registerFactoryOptions(opts: Record<string, any>) {
     Object.assign(FixtureFactory.DEFAULT_OPTIONS, opts);
@@ -227,7 +236,7 @@ export class FixtureFactory {
 
     const result: FactoryResult<InstanceType<T>> = {
       one: () => {
-        let error = false;
+        let error!: Error;
         let object: any = {};
         const startDate = new Date();
 
@@ -238,14 +247,27 @@ export class FixtureFactory {
             chalk.red(`An error occurred while generating "${meta.name}"`),
             true
           );
-          console.error(err);
-          error = true;
+          if (
+            err instanceof Error &&
+            err.message.includes('Timeout: generating is taking too long')
+          ) {
+            // We discard the stacktrace because it is too long
+            error = new Error(err.message);
+          } else {
+            error = err;
+          }
+          console.error(error);
         }
 
         const elapsed = +new Date() - +startDate;
-        this.logger.onFinished(elapsed, error);
+        this.logger.onFinished(elapsed, !!error);
         this.log('\n' + this.logger.log());
-        return error ? null : object;
+
+        if (error && !ctx.options.partialResultOnError) {
+          throw error;
+        }
+
+        return object;
       },
       many: (x: number) => {
         return [...Array(x).keys()].map(() => result.one());

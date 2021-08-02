@@ -834,17 +834,16 @@ describe(`FixtureFactory`, () => {
       }
       factory.register([DummyAuthor, DummyBook]);
 
-      // expect(() => factory.make).toThrow() is not working...
-      try {
+      expect(() =>
         factory
           .make(DummyAuthor, {
             maxOccurrencesPerPath: 10,
             reuseCircularRelationships: false,
+            partialResultOnError: false,
+            lazy: false, // when run through factory-lazy.test, lazy must be false, because a lazily generation cannot timeout
           })
-          .one();
-      } catch (error) {
-        expect(error).toBeDefined();
-      }
+          .one()
+      ).toThrow();
     }, 4000);
   });
 });
