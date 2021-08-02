@@ -511,6 +511,7 @@ describe(`FixtureFactory`, () => {
       });
     });
 
+    // TODO: handle author.friend case
     describe(`reuseCircularRelationships`, () => {
       it(`[reuseCircularRelationships = false]`, () => {
         class DummyAuthor {
@@ -640,9 +641,11 @@ describe(`FixtureFactory`, () => {
           .one();
         /**
          * old instances are reused for each new relationship
+         * but each instance in an array is unique
          */
         expect(author.books[0].author).toBeInstanceOf(DummyAuthor);
         expect(author.books[0].author).toBe(author);
+        expect(author.books[1]).not.toBe(author.books[0]); // each instance in an array is unique
         expect(author.books[0].author.books[0]).toBeInstanceOf(DummyBook);
         expect(author.books[0].author.books[0]).toBe(author.books[0]);
       });
@@ -666,9 +669,11 @@ describe(`FixtureFactory`, () => {
           .one();
         /**
          * old instances are reused for each new relationship
+         * but each instance in an array is unique
          */
         expect(author.books[0].authors[0]).toBeInstanceOf(DummyAuthor);
         expect(author.books[0].authors[0]).toBe(author);
+        expect(author.books[0].authors[1]).not.toBe(author); // each instance in an array is unique
         expect(author.books[0].authors[0].books[0]).toBeInstanceOf(DummyBook);
         expect(author.books[0].authors[0].books[0]).toBe(author.books[0]);
         expect(author.books[0].authors[0].books[0].authors[0]).toBeInstanceOf(

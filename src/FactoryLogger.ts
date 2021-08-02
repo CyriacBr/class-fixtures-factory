@@ -1,6 +1,8 @@
 import { ClassMetadata, PropertyMetadata } from './metadata';
 import chalk from 'chalk';
 import treeify from 'treeify';
+import { dotPathSet } from './utils/dot-path';
+import { inspect } from 'util';
 
 export class FactoryLogger {
   /**
@@ -17,82 +19,74 @@ export class FactoryLogger {
    * }
    * ```
    */
-  private rootTree: any = {};
   private tree: any = {};
-  private duplicates: Record<string, number> = {};
-  // TODO: Output lazy prop?
-  private lazy = false;
 
-  start(meta: ClassMetadata, number = 0, lazy?: boolean) {
-    this.lazy = lazy ?? false;
-    const entry = `New${
-      lazy ? chalk.cyan(' lazy') : ''
-    } instance of ${chalk.cyan(meta.name)}${
-      number ? `${chalk.gray(` (${number})`)}` : ''
-    }`;
-    this.rootTree[entry] = {};
-    this.tree = this.rootTree[entry];
+  private appendLeaf(path: string[], value: any) {
+    const transformedPath: string[] = [];
+    for (const step of path) {
+      let [className, propName] = step.split('.');
+      if (propName) {
+        transformedPath.push(
+          `Generating ${chalk.cyan(className)}`,
+          chalk.cyan(propName)
+        );
+      } else {
+        transformedPath.push(chalk.cyan(className));
+      }
+    }
+    dotPathSet(this.tree, transformedPath, value);
   }
 
-  onClassPropDone(prop: PropertyMetadata, targetLogger: FactoryLogger) {
-    const name = chalk.cyan(prop.name);
-    if (this.tree[name]) {
-      const number = (this.duplicates[prop.name] =
-        (this.duplicates[prop.name] || 0) + 1);
-      const entry = (val: number) =>
-        `New instance of ${chalk.cyan(prop.type)}${chalk.gray('"')}${chalk.gray(
-          ` (${val})`
-        )}`;
-      const firstKey = Object.keys(this.tree[name])[0];
-      if (number === 1) {
-        this.tree[name][entry(number - 1)] = this.tree[name][firstKey];
-        delete this.tree[name][firstKey];
-      }
-      this.tree[name][entry(number)] = targetLogger.rootTree;
+  onGenerateObject(path: string[]) {
+    this.appendLeaf(path, {});
+  }
+
+  onGenerateScalar(path: string[], value: any) {
+    this.appendLeaf(path, inspect(value, { colors: true }));
+  }
+
+  onGenerateArray(path: string[]) {
+    this.appendLeaf(path, {});
+  }
+
+  onIgnoreProp(path: string[]) {
+    const label = chalk.grey('ignored');
+    this.appendLeaf(path, label);
+  }
+
+  onCustomProp(path: string[]) {
+    const label = chalk.grey('gen. by user');
+    this.appendLeaf(path, label);
+  }
+
+  onOverrodeProp(path: string[]) {
+    const label = chalk.grey('gen. by plugin');
+    this.appendLeaf(path, label);
+  }
+
+  onReusedProp(path: string[]) {
+    const label = chalk.grey('reused');
+    this.appendLeaf(path, label);
+  }
+
+  onSkipProp(path: string[]) {
+    const label = chalk.grey('skipped');
+    this.appendLeaf(path, label);
+  }
+
+  onFinished(elapsedMs: number, error: boolean) {
+    const label = `${
+      error ? chalk.red('Error') : chalk.green('Done')
+    } ${chalk.gray(`(${elapsedMs}ms)`)}`;
+    const firstKey = Object.keys(this.tree)[0];
+    if (this.tree[firstKey]) {
+      this.tree[firstKey][label] = null;
     } else {
-      this.tree[name] = targetLogger.rootTree;
+      this.tree[label] = null;
     }
   }
 
-  onNormalProp(prop: PropertyMetadata, value: any) {
-    const name = chalk.cyan(prop.name);
-    this.tree[name] = value;
-  }
-
-  onAdapterProp(prop: PropertyMetadata, _value: any) {
-    const name = chalk.cyan(prop.name);
-    this.tree[name] = `${chalk.gray('[adapter]')}`;
-  }
-
-  onReusedProp(prop: PropertyMetadata) {
-    const name = chalk.cyan(prop.name);
-    this.tree[name] = `${chalk.gray('reused')} ${chalk.cyan(prop.type)}`;
-  }
-
-  onPropNotGenerated(prop: PropertyMetadata) {
-    const name = chalk.cyan(prop.name);
-    this.tree[name] = `${chalk.gray('not generated')}`;
-  }
-
-  onIgnoredProp(prop: PropertyMetadata) {
-    const name = chalk.cyan(prop.name);
-    this.tree[name] = chalk.gray(`ignored`);
-  }
-
-  onCustomProp(prop: PropertyMetadata) {
-    const name = chalk.cyan(prop.name);
-    this.tree[name] = chalk.gray(`custom value`);
-  }
-
-  onDone(duration: number) {
-    this.tree[`${chalk.green('Done')} ${chalk.gray(`(${duration}ms)`)}`] = null;
-  }
-
-  onError(duration: number) {
-    this.tree[`${chalk.red('Error')} ${chalk.gray(`(${duration}ms)`)}`] = null;
-  }
-
   log() {
-    return treeify.asTree(this.rootTree, true, false);
+    return treeify.asTree(this.tree, true, false);
   }
 }

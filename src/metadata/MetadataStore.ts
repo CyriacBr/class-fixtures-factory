@@ -17,7 +17,7 @@ export interface ClassMetadata {
 
 export interface PropertyMetadata {
   name: string;
-  type: string;
+  type: string | Class;
   scalar?: boolean;
   enum?: boolean;
   items?: any[];

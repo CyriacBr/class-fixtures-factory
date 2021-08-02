@@ -110,6 +110,7 @@ export interface FactoryContext {
   startDate: Date;
   userInput: Record<string, any>;
   ignoredPaths: string[];
+  arrayIndex?: number;
 }
 
 export class FixtureFactory {
@@ -118,6 +119,7 @@ export class FixtureFactory {
   private options!: DeepRequired<FactoryOptions>;
   private loggers: FactoryLogger[] = [];
   private assigner: Assigner = this.defaultAssigner.bind(this);
+  private logger!: FactoryLogger;
 
   private static DEFAULT_OPTIONS: DeepRequired<FactoryOptions> = {
     logging: false,
@@ -176,30 +178,6 @@ export class FixtureFactory {
     }
   }
 
-  newLogger(meta: ClassMetadata, lazy?: boolean) {
-    this.loggers.unshift(new FactoryLogger());
-    const logger = this.logger();
-    logger?.start(meta, 0, lazy);
-    return logger;
-  }
-
-  logger() {
-    return this.loggers[0];
-  }
-
-  printLogger(dispose = false) {
-    const logger = this.logger();
-    if (!logger) return;
-    this.log('\n' + logger.log());
-    if (dispose) {
-      this.disposeLogger();
-    }
-  }
-
-  disposeLogger() {
-    this.loggers.shift();
-  }
-
   /**
    * Register classes to be used by the factory
    * @param classTypes
@@ -245,13 +223,13 @@ export class FixtureFactory {
       userInput: {},
       ignoredPaths: [],
     };
+    this.logger = new FactoryLogger();
 
     const result: FactoryResult<InstanceType<T>> = {
       one: () => {
         let error = false;
         let object: any = {};
         const startDate = new Date();
-        this.newLogger(meta, ctx.options.lazy);
 
         try {
           object = this._make(meta, classType, ctx);
@@ -265,8 +243,8 @@ export class FixtureFactory {
         }
 
         const elapsed = +new Date() - +startDate;
-        this.logger()?.[error ? 'onError' : 'onDone'](elapsed);
-        this.printLogger(true);
+        this.logger.onFinished(elapsed, error);
+        this.log('\n' + this.logger.log());
         return error ? null : object;
       },
       many: (x: number) => {
@@ -308,7 +286,9 @@ export class FixtureFactory {
           if (!prop) {
             throw new Error(`Couldn't generate lazily "${p}" of "${meta.name}`);
           }
-          let value = this.makeProperty(prop, meta, ctx);
+          const newCtx = { ...ctx, path: [...ctx.path] };
+          newCtx.path.push(`${meta.name}.${prop.name}`);
+          let value = this.makeProperty(prop, meta, newCtx);
           value = prop.hooks?.[SECRET].afterValueGenerated?.(value) ?? value;
           return (target[p] = value);
         },
@@ -319,8 +299,10 @@ export class FixtureFactory {
 
     ctx.pathReferences.push(object);
     for (const prop of meta.properties) {
+      const newCtx = { ...ctx, path: [...ctx.path] };
+      newCtx.path.push(`${meta.name}.${prop.name}`);
       if (prop.ignore) continue;
-      let value = this.makeProperty(prop, meta, ctx);
+      let value = this.makeProperty(prop, meta, newCtx);
       value = prop.hooks?.[SECRET].afterValueGenerated?.(value) ?? value;
       this.assigner(prop, object, value);
     }
@@ -332,36 +314,38 @@ export class FixtureFactory {
     meta: ClassMetadata,
     ctx: FactoryContext
   ): any {
-    const convertedPath = [...ctx.path, prop.name]
+    const convertedPath = ctx.path
       .map(v => v.split('.').reverse()[0])
       .join('.');
     if (ctx.ignoredPaths.includes(convertedPath)) {
-      this.logger()?.onIgnoredProp(prop);
+      this.logger.onIgnoreProp(ctx.path);
       return undefined;
     }
     for (const [path, pathValue] of Object.entries(ctx.userInput)) {
       if (path === convertedPath) {
-        this.logger()?.onCustomProp(prop);
+        this.logger.onCustomProp(ctx.path);
         return pathValue;
       }
     }
 
     if (prop.hooks?.[SECRET].hasOverrodeValue()) {
       const value = prop.hooks[SECRET].getValueOverride();
-      this.logger()?.onAdapterProp(prop, value);
+      this.logger.onOverrodeProp(ctx.path);
       return value;
     }
     if (prop.input) {
-      this.logger()?.onCustomProp(prop);
+      this.logger.onCustomProp(ctx.path);
       return prop.input();
     }
     if (prop.array) {
+      this.logger.onGenerateArray(ctx.path);
       return this.makeArrayProp(prop, meta, ctx);
     } else if (prop.scalar) {
       const value = this.makeScalarProperty(prop);
-      this.logger()?.onNormalProp(prop, value);
+      this.logger.onGenerateScalar(ctx.path, value);
       return value;
     }
+    this.logger.onGenerateObject(ctx.path);
     return this.makeObjectProp(meta, prop, ctx);
   }
 
@@ -493,14 +477,17 @@ export class FixtureFactory {
       max: typeof prop.max === 'number' ? prop.max : 3,
       min: typeof prop.min === 'number' ? prop.min : 1,
     });
-    const scalar = ['string', 'number', 'boolean', 'Date'].includes(prop.type);
+    const scalar = ['string', 'number', 'boolean', 'Date'].includes(
+      prop.type as string
+    );
     return [...Array(amount).keys()]
       .map((_, i) => {
         const newContext: FactoryContext = {
           ...ctx,
-          path: [...ctx.path],
+          path: [...ctx.path, String(i)],
+          arrayIndex: i,
         };
-        this.appendContextPath(newContext, String(i));
+        // this.appendContextPath(newContext, String(i));
         return this.makeProperty(
           {
             ...prop,
@@ -520,36 +507,55 @@ export class FixtureFactory {
     ctx: FactoryContext
   ) {
     const refClassMeta = this.store.get(prop.type);
+    const typeName = typeof prop.type === 'string' ? prop.type : prop.type.name;
 
-    const newCtx: FactoryContext = { ...ctx, path: [...ctx.path] };
-    newCtx.path = [...newCtx.path];
-    this.appendContextPath(newCtx, `${meta.name}.${prop.name}`);
-    const occurrenceNbr = newCtx.path.filter(v => v.startsWith(prop.type))
+    const newCtx: FactoryContext = {
+      ...ctx,
+      // path: [...ctx.path],
+      arrayIndex: undefined,
+    };
+    // this.appendContextPath(newCtx, `${meta.name}.${prop.name}`);
+
+    const occurrenceNbr = newCtx.path.filter(v => v.startsWith(typeName))
       .length;
+    /**
+     * If we are generating an array item, we inflate the max number
+     * of occurrence so that each item in the array is unique.
+     * This is true unless reuseCircularRelationships is false,
+     * as that'd lead to infinite generation
+     */
+    const inflatedMaxOccurrences = newCtx.options.reuseCircularRelationships
+      ? ctx.arrayIndex || 0
+      : 0;
     if (
       newCtx.depthLevel >= newCtx.options.maxDepthLevel! ||
-      occurrenceNbr >= newCtx.options.maxOccurrencesPerPath!
+      occurrenceNbr >=
+        newCtx.options.maxOccurrencesPerPath! + inflatedMaxOccurrences
     ) {
-      const lastInstance = [...newCtx.pathReferences]
-        .reverse()
-        .find(v => v.constructor.name === prop.type);
+      const instances = newCtx.pathReferences
+        .filter(v => v.constructor.name === typeName)
+        .reverse();
+      const lastInstance =
+        ctx.arrayIndex != null
+          ? instances[ctx.arrayIndex] || instances[0]
+          : instances[0];
       if (lastInstance && newCtx.options.reuseCircularRelationships) {
-        this.logger()?.onReusedProp(prop);
+        this.logger.onReusedProp(ctx.path);
         return lastInstance;
       }
-      this.logger()?.onPropNotGenerated(prop);
+      this.logger.onSkipProp(ctx.path);
       return undefined;
     }
     newCtx.depthLevel += 1;
 
-    const oldLogger = this.logger();
-    const logger = this.newLogger(refClassMeta, ctx.options.lazy);
+    // const oldLogger = this.logger();
+    // const logger = this.newLogger(refClassMeta, ctx.options.lazy);
 
-    const value = this._make(refClassMeta, this.classTypes[prop.type], newCtx);
+    const value = this._make(refClassMeta, this.classTypes[typeName], newCtx);
     newCtx.pathReferences.push(value);
 
-    oldLogger?.onClassPropDone(prop, logger);
-    this.disposeLogger();
+    // oldLogger?.onClassPropDone(prop, logger);
+    // this.disposeLogger();
 
     return value;
   }
