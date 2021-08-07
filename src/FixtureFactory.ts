@@ -333,16 +333,18 @@ export class FixtureFactory {
           if (p in target) return target[p];
           const prop = meta.properties.find(v => v.name === p);
           if (!prop) {
-            throw new Error(`Couldn't generate lazily "${p}" of "${meta.name}`);
+            return undefined;
           }
           const newCtx: FactoryContext = {
             ...ctx,
             path: [...ctx.path],
+            pathReferences: [...ctx.pathReferences],
             currentRef: proxy,
           };
           newCtx.path.push(`${meta.name}.${prop.name}`);
           let value = this.makeProperty(prop, meta, newCtx);
           value = prop.hooks?.[SECRET].afterValueGenerated?.(value) ?? value;
+          // TODO: use assigner and prop.ignore too
           return (target[p] = value);
         },
       });
@@ -355,6 +357,7 @@ export class FixtureFactory {
       const newCtx: FactoryContext = {
         ...ctx,
         path: [...ctx.path],
+        pathReferences: [...ctx.pathReferences],
         currentRef: object,
       };
       newCtx.path.push(`${meta.name}.${prop.name}`);
@@ -542,6 +545,7 @@ export class FixtureFactory {
         const newContext: FactoryContext = {
           ...ctx,
           path: [...ctx.path, String(i)],
+          pathReferences: [...ctx.pathReferences],
           arrayIndex: i,
         };
         // this.appendContextPath(newContext, String(i));

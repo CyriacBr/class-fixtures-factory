@@ -682,6 +682,38 @@ describe(`FixtureFactory`, () => {
         expect(author.books[0].authors[0].books[0].authors[0]).toBe(author);
       });
 
+      it(`[reuseCircularRelationships = true] reuse is based on path`, () => {
+        class A {
+          @Fixture({ type: () => [B], min: 2, max: 2 })
+          bItems!: B[];
+        }
+        class B {
+          @Fixture({ type: () => D })
+          d!: D;
+        }
+        class C {
+          @Fixture({ type: () => D })
+          d!: D;
+        }
+        class D {
+          @Fixture({ type: () => C })
+          c!: C;
+        }
+        factory.register([A, B, C, D]);
+
+        const a = factory
+          .make(A, {
+            maxOccurrencesPerPath: 1,
+            reuseCircularRelationships: true,
+          })
+          .one();
+
+        expect(a.bItems[0].d).not.toBe(a.bItems[1].d);
+        expect(a.bItems[0].d.c.d).toBe(a.bItems[0].d);
+        expect(a.bItems[1].d.c.d).toBe(a.bItems[1].d);
+        expect(a.bItems[0].d.c.d).not.toBe(a.bItems[1].d.c.d); // reused D instance from first path is not the same from the second path
+      });
+
       it(`[reuseCircularRelationships = true] direct friendships are not reused`, () => {
         class DummyAuthor {
           @Fixture({ type: () => DummyBook })
