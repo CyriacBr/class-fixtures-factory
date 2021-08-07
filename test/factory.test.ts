@@ -681,6 +681,33 @@ describe(`FixtureFactory`, () => {
         );
         expect(author.books[0].authors[0].books[0].authors[0]).toBe(author);
       });
+
+      it(`[reuseCircularRelationships = true] direct friendships are not reused`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => DummyBook })
+          book!: DummyBook;
+          @Fixture({ type: () => DummyAuthor })
+          friend!: DummyAuthor;
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 1,
+            reuseCircularRelationships: true,
+            doNotReuseDirectFriendship: true,
+          })
+          .one();
+
+        expect(author.friend).not.toBe(author);
+        expect(author.friend.book.author).toBe(author.friend);
+        expect(author.friend.friend).toBe(author);
+        expect(author.friend.book.author.friend).toBe(author);
+      });
     });
 
     describe(`maxOccurrencePerPath`, () => {

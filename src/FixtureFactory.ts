@@ -68,6 +68,27 @@ export interface FactoryOptions {
    */
   reuseCircularRelationships?: boolean;
   /**
+   * This parameter defines wether to reuse a direct friend relation or not,
+   * when `reuseCircularRelationships` is true.
+   *
+   * A friend relation is when an entity possess a property whose type is its own entity.
+   * ```ts
+   * class Author {
+   *  friend: Author
+   * }
+   * ```
+   * With `reuseCircularRelationship` to true, author.friend would be equals to the author itself,
+   * which makes little sens in most case.
+   * So, in order for the factory to generate more realistic entities, this parameter
+   * when at true, disallows direct friendships to be reused.
+   * So, even with `reuseCircularRelationships` to true, `author.friend` would not equals `author`,
+   * a new entity will be generated.
+   *
+   * The default value is true
+   *
+   */
+  doNotReuseDirectFriendship?: boolean;
+  /**
    * This parameter defines how many instance of the same class should be generated per path.
    * It helps to prevent infinite instances from circular relationships that are not direct.
    * Let's say we have these relationships:
@@ -115,6 +136,7 @@ export interface FactoryContext {
   options: DeepRequired<FactoryOptions>;
   path: string[];
   pathReferences: InstanceType<Class>[];
+  currentRef: any;
   startDate: Date;
   userInput: Record<string, any>;
   ignoredPaths: string[];
@@ -129,11 +151,13 @@ export class FixtureFactory {
   private assigner: Assigner = this.defaultAssigner.bind(this);
   private logger!: FactoryLogger;
 
+  //@ts-expect-error
   private static DEFAULT_OPTIONS: DeepRequired<FactoryOptions> = {
     logging: false,
     maxDepthLevel: 100,
     maxOccurrencesPerPath: 1,
     reuseCircularRelationships: true,
+    doNotReuseDirectFriendship: true,
     timeout: 3,
     lazy: false,
     partialResultOnError: false,
@@ -228,6 +252,7 @@ export class FixtureFactory {
       options: ctxOptions,
       path: [],
       pathReferences: [],
+      currentRef: null,
       startDate: new Date(),
       userInput: {},
       ignoredPaths: [],
@@ -239,6 +264,7 @@ export class FixtureFactory {
         let error!: Error;
         let object: any = {};
         const startDate = new Date();
+        ctx.currentRef = object;
 
         try {
           object = this._make(meta, classType, ctx);
@@ -269,6 +295,7 @@ export class FixtureFactory {
 
         return object;
       },
+      // TODO: call .make for each instance
       many: (x: number) => {
         return [...Array(x).keys()].map(() => result.one());
       },
@@ -308,7 +335,11 @@ export class FixtureFactory {
           if (!prop) {
             throw new Error(`Couldn't generate lazily "${p}" of "${meta.name}`);
           }
-          const newCtx = { ...ctx, path: [...ctx.path] };
+          const newCtx: FactoryContext = {
+            ...ctx,
+            path: [...ctx.path],
+            currentRef: proxy,
+          };
           newCtx.path.push(`${meta.name}.${prop.name}`);
           let value = this.makeProperty(prop, meta, newCtx);
           value = prop.hooks?.[SECRET].afterValueGenerated?.(value) ?? value;
@@ -321,7 +352,11 @@ export class FixtureFactory {
 
     ctx.pathReferences.push(object);
     for (const prop of meta.properties) {
-      const newCtx = { ...ctx, path: [...ctx.path] };
+      const newCtx: FactoryContext = {
+        ...ctx,
+        path: [...ctx.path],
+        currentRef: object,
+      };
       newCtx.path.push(`${meta.name}.${prop.name}`);
       if (prop.ignore) continue;
       let value = this.makeProperty(prop, meta, newCtx);
@@ -533,10 +568,8 @@ export class FixtureFactory {
 
     const newCtx: FactoryContext = {
       ...ctx,
-      // path: [...ctx.path],
       arrayIndex: undefined,
     };
-    // this.appendContextPath(newCtx, `${meta.name}.${prop.name}`);
 
     const occurrenceNbr = newCtx.path.filter(v => v.startsWith(typeName))
       .length;
@@ -554,30 +587,38 @@ export class FixtureFactory {
       occurrenceNbr >=
         newCtx.options.maxOccurrencesPerPath! + inflatedMaxOccurrences
     ) {
-      const instances = newCtx.pathReferences
-        .filter(v => v.constructor.name === typeName)
-        .reverse();
+      const instances = newCtx.pathReferences.filter(
+        v => v.constructor.name === typeName
+      );
+      const getLastInstance = (): null | object => {
+        let instance = instances.pop();
+        if (!instance) return null;
+        if (instance === newCtx.currentRef) return getLastInstance();
+        return instance;
+      };
       const lastInstance =
         ctx.arrayIndex != null
-          ? instances[ctx.arrayIndex] || instances[0]
-          : instances[0];
-      if (lastInstance && newCtx.options.reuseCircularRelationships) {
-        this.logger.onReusedProp(ctx.path);
-        return lastInstance;
+          ? instances.reverse()[ctx.arrayIndex] || instances.reverse()[0]
+          : getLastInstance();
+      const isFriendship = newCtx.currentRef.constructor.name === typeName;
+      let skipGenerate = true;
+      if (newCtx.options.reuseCircularRelationships) {
+        if (lastInstance) {
+          this.logger.onReusedProp(ctx.path);
+          return lastInstance;
+        } else if (isFriendship && newCtx.options.doNotReuseDirectFriendship) {
+          skipGenerate = false;
+        }
       }
-      this.logger.onSkipProp(ctx.path);
-      return undefined;
+      if (skipGenerate) {
+        this.logger.onSkipProp(ctx.path);
+        return undefined;
+      }
     }
     newCtx.depthLevel += 1;
 
-    // const oldLogger = this.logger();
-    // const logger = this.newLogger(refClassMeta, ctx.options.lazy);
-
     const value = this._make(refClassMeta, this.classTypes[typeName], newCtx);
     newCtx.pathReferences.push(value);
-
-    // oldLogger?.onClassPropDone(prop, logger);
-    // this.disposeLogger();
 
     return value;
   }
