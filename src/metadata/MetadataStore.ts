@@ -31,6 +31,10 @@ export interface PropertyMetadata {
    */
   input?: (...args: any[]) => any;
   hooks?: FactoryHooks;
+  maxDepthLevel?: number | ((value: number) => number);
+  reuseCircularRelationships?: boolean;
+  doNotReuseDirectFriendship?: boolean;
+  maxOccurrencesPerPath?: number | ((value: number) => number);
 }
 
 export class MetadataStore {
@@ -184,6 +188,10 @@ export class MetadataStore {
           );
         }
         meta.precision = decorator.precision;
+        meta.maxDepthLevel = decorator.maxDepthLevel;
+        meta.reuseCircularRelationships = decorator.reuseCircularRelationships;
+        meta.doNotReuseDirectFriendship = decorator.doNotReuseDirectFriendship;
+        meta.maxOccurrencesPerPath = decorator.maxOccurrencesPerPath;
         let inputType: any = decorator.type?.();
         if (inputType) {
           if (Array.isArray(inputType)) {

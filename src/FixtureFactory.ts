@@ -574,6 +574,16 @@ export class FixtureFactory {
       ...ctx,
       arrayIndex: undefined,
     };
+    const {
+      reuseCircularRelationships,
+      maxOccurrencesPerPath,
+      maxDepthLevel,
+      doNotReuseDirectFriendship,
+    } = newCtx.options;
+    const propReuseCircularRelationships =
+      prop.reuseCircularRelationships ?? reuseCircularRelationships;
+    const propDoNotReuseDirectFriendship =
+      prop.doNotReuseDirectFriendship ?? doNotReuseDirectFriendship;
 
     const occurrenceNbr = newCtx.path.filter(v => v.startsWith(typeName))
       .length;
@@ -583,13 +593,23 @@ export class FixtureFactory {
      * This is true unless reuseCircularRelationships is false,
      * as that'd lead to infinite generation
      */
-    const inflatedMaxOccurrences = newCtx.options.reuseCircularRelationships
+    const inflatedMaxOccurrences = reuseCircularRelationships
       ? ctx.arrayIndex || 0
       : 0;
+
+    const propMaxDepthLevel =
+      typeof prop.maxDepthLevel === 'function'
+        ? prop.maxDepthLevel(maxDepthLevel)
+        : prop.maxDepthLevel ?? maxDepthLevel;
+    let propMaxOccurrencesPerPath =
+      typeof prop.maxOccurrencesPerPath === 'function'
+        ? prop.maxOccurrencesPerPath(maxOccurrencesPerPath)
+        : prop.maxOccurrencesPerPath ?? maxOccurrencesPerPath;
+    propMaxOccurrencesPerPath += inflatedMaxOccurrences;
+
     if (
-      newCtx.depthLevel >= newCtx.options.maxDepthLevel! ||
-      occurrenceNbr >=
-        newCtx.options.maxOccurrencesPerPath! + inflatedMaxOccurrences
+      newCtx.depthLevel >= propMaxDepthLevel ||
+      occurrenceNbr >= propMaxOccurrencesPerPath
     ) {
       const instances = newCtx.pathReferences.filter(
         v => v.constructor.name === typeName
@@ -606,11 +626,11 @@ export class FixtureFactory {
           : getLastInstance();
       const isFriendship = newCtx.currentRef.constructor.name === typeName;
       let skipGenerate = true;
-      if (newCtx.options.reuseCircularRelationships) {
+      if (propReuseCircularRelationships) {
         if (lastInstance) {
           this.logger.onReusedProp(ctx.path);
           return lastInstance;
-        } else if (isFriendship && newCtx.options.doNotReuseDirectFriendship) {
+        } else if (isFriendship && propDoNotReuseDirectFriendship) {
           skipGenerate = false;
         }
       }

@@ -14,6 +14,10 @@ export type FixtureOptions =
       precision?: number;
       // eslint-disable-next-line no-undef
       get?: ((faker: Faker.FakerStatic) => string | undefined) | (() => any);
+      maxDepthLevel?: number;
+      reuseCircularRelationships?: boolean;
+      doNotReuseDirectFriendship?: boolean;
+      maxOccurrencesPerPath?: number | ((value: number) => number);
     };
 
 /**

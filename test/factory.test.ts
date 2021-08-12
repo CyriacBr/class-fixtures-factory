@@ -509,6 +509,24 @@ describe(`FixtureFactory`, () => {
           }
         }
       });
+
+      it(`overrode at prop level`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => DummyBook })
+          book!: DummyBook;
+          @Fixture({ type: () => DummyBook, maxDepthLevel: 1 })
+          book2!: DummyBook;
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory.make(DummyAuthor, { maxDepthLevel: 0 }).one();
+        expect(author.book).toBeUndefined();
+        expect(author.book2).toBeTruthy();
+      });
     });
 
     // TODO: handle author.friend case
@@ -740,6 +758,39 @@ describe(`FixtureFactory`, () => {
         expect(author.friend.friend).toBe(author);
         expect(author.friend.book.author.friend).toBe(author);
       });
+
+      it(`overrode at prop level`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => DummyBook })
+          book!: DummyBook;
+        }
+        class DummyBook {
+          @Fixture({
+            type: () => DummyAuthor,
+            reuseCircularRelationships: true,
+            maxOccurrencesPerPath: 1,
+          })
+          author2!: DummyAuthor;
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 10,
+            reuseCircularRelationships: false,
+          })
+          .one();
+        /**
+         * new instances are created for each relationship
+         */
+        expect(author.book.author).toBeInstanceOf(DummyAuthor);
+        expect(author.book.author).not.toBe(author);
+        expect(author.book.author2).toBe(author);
+        expect(author.book.author.book).toBeInstanceOf(DummyBook);
+        expect(author.book.author.book).not.toBe(author.book);
+      });
     });
 
     describe(`maxOccurrencePerPath`, () => {
@@ -879,6 +930,32 @@ describe(`FixtureFactory`, () => {
          * the Author instance is created multiple times
          */
         expect(author.books[0].authors[0]).toBeDefined();
+      });
+
+      it(`overrode at prop level`, () => {
+        class DummyAuthor {
+          @Fixture({ type: () => DummyBook })
+          book!: DummyBook;
+        }
+        class DummyBook {
+          @Fixture({ type: () => DummyAuthor })
+          author!: DummyAuthor;
+          @Fixture({ type: () => DummyAuthor, maxOccurrencesPerPath: 2 })
+          author2!: DummyAuthor;
+        }
+        factory.register([DummyAuthor, DummyBook]);
+
+        const author = factory
+          .make(DummyAuthor, {
+            maxOccurrencesPerPath: 1,
+            reuseCircularRelationships: false,
+          })
+          .one();
+        /**
+         * the Author instance is created only once
+         */
+        expect(author.book.author).toBeUndefined();
+        expect(author.book.author2).toBeTruthy();
       });
     });
 
