@@ -29,6 +29,7 @@ export interface FactoryResult<T> {
    * Ignored paths result in undefined values
    */
   ignore: (...props: DeepKeyOf<T>[]) => FactoryResult<T>;
+  withStats: () => FactoryResult<FactoryStats<T>>;
 }
 
 export type Assigner = (
@@ -141,13 +142,22 @@ export interface FactoryContext {
   userInput: Record<string, any>;
   ignoredPaths: string[];
   arrayIndex?: number;
+  stats: FactoryStats<any>;
+}
+
+export interface FactoryStats<T> {
+  result: T;
+  paths: {
+    value: string[];
+    references: Class[];
+  }[];
+  instances: WeakMap<Class, InstanceType<Class>[]>;
 }
 
 export class FixtureFactory {
   private store = new MetadataStore();
   private classTypes: Record<string, Class> = {};
   private options!: DeepRequired<FactoryOptions>;
-  private loggers: FactoryLogger[] = [];
   private assigner: Assigner = this.defaultAssigner.bind(this);
   private logger!: FactoryLogger;
 
@@ -256,8 +266,14 @@ export class FixtureFactory {
       startDate: new Date(),
       userInput: {},
       ignoredPaths: [],
+      stats: {
+        result: null,
+        instances: new Map<any, any>(),
+        paths: [],
+      },
     };
     this.logger = new FactoryLogger();
+    let returnStats = false;
 
     const result: FactoryResult<InstanceType<T>> = {
       one: () => {
@@ -265,6 +281,7 @@ export class FixtureFactory {
         let object: any = {};
         const startDate = new Date();
         ctx.currentRef = object;
+        ctx.stats.result = object;
 
         try {
           object = this._make(meta, classType, ctx);
@@ -293,6 +310,10 @@ export class FixtureFactory {
           throw error;
         }
 
+        if (returnStats) {
+          return ctx.stats;
+        }
+
         return object;
       },
       // TODO: call .make for each instance
@@ -306,6 +327,10 @@ export class FixtureFactory {
       },
       ignore: (...paths: DeepKeyOf<T>[]) => {
         ctx.ignoredPaths = [...ctx.ignoredPaths, ...(paths as string[])];
+        return result;
+      },
+      withStats: () => {
+        returnStats = true;
         return result;
       },
     };
@@ -335,12 +360,7 @@ export class FixtureFactory {
           if (!prop) {
             return undefined;
           }
-          const newCtx: FactoryContext = {
-            ...ctx,
-            path: [...ctx.path],
-            pathReferences: [...ctx.pathReferences],
-            currentRef: proxy,
-          };
+          const newCtx = this._preparePropertyGeneration(ctx, proxy);
           newCtx.path.push(`${meta.name}.${prop.name}`);
           let value = this.makeProperty(prop, meta, newCtx);
           value = prop.hooks?.[SECRET].afterValueGenerated?.(value) ?? value;
@@ -348,18 +368,13 @@ export class FixtureFactory {
           return (target[p] = value);
         },
       });
-      ctx.pathReferences.push(proxy);
+      this._prepareObjectGeneration(ctx, classType, proxy);
       return proxy;
     }
 
-    ctx.pathReferences.push(object);
+    this._prepareObjectGeneration(ctx, classType, object);
     for (const prop of meta.properties) {
-      const newCtx: FactoryContext = {
-        ...ctx,
-        path: [...ctx.path],
-        pathReferences: [...ctx.pathReferences],
-        currentRef: object,
-      };
+      const newCtx = this._preparePropertyGeneration(ctx, object);
       newCtx.path.push(`${meta.name}.${prop.name}`);
       if (prop.ignore) continue;
       let value = this.makeProperty(prop, meta, newCtx);
@@ -367,6 +382,32 @@ export class FixtureFactory {
       this.assigner(prop, object, value);
     }
     return object;
+  }
+
+  private _prepareObjectGeneration(
+    ctx: FactoryContext,
+    classType: Class,
+    object: any
+  ) {
+    ctx.pathReferences.push(object);
+    if (!ctx.stats.instances.has(classType)) {
+      ctx.stats.instances.set(classType, []);
+    }
+    ctx.stats.instances.get(classType)!.push(object);
+  }
+
+  private _preparePropertyGeneration(ctx: FactoryContext, object: any) {
+    ctx.stats.paths.push({
+      value: [...ctx.path],
+      references: [...ctx.pathReferences],
+    });
+    const newCtx: FactoryContext = {
+      ...ctx,
+      path: [...ctx.path],
+      pathReferences: [...ctx.pathReferences],
+      currentRef: object,
+    };
+    return newCtx;
   }
 
   protected makeProperty(
