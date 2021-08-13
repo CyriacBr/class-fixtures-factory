@@ -281,7 +281,6 @@ export class FixtureFactory {
         let object: any = {};
         const startDate = new Date();
         ctx.currentRef = object;
-        ctx.stats.result = object;
 
         try {
           object = this._make(meta, classType, ctx);
@@ -311,6 +310,7 @@ export class FixtureFactory {
         }
 
         if (returnStats) {
+          ctx.stats.result = object;
           return ctx.stats;
         }
 
