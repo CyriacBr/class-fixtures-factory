@@ -18,6 +18,8 @@ export type FixtureOptions =
       reuseCircularRelationships?: boolean;
       doNotReuseDirectFriendship?: boolean;
       maxOccurrencesPerPath?: number | ((value: number) => number);
+      unique?: boolean;
+      uniqueCacheKey?: string;
     };
 
 /**

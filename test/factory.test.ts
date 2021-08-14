@@ -181,6 +181,77 @@ describe(`FixtureFactory`, () => {
       expect(typeof person.value).toBe('number');
     });
 
+    describe(`@Fixture({ unique })`, () => {
+      it(`unique numbers are generated per property`, () => {
+        class Person {
+          @Fixture({ unique: true })
+          value1!: number;
+          @Fixture({ unique: true })
+          value2!: number;
+        }
+        factory.register([Person]);
+
+        for (let i = 0; i < 10; i++) {
+          const person = factory.make(Person).one();
+          expect(person.value1).toBe(i + 1);
+          expect(person.value2).toBe(i + 1);
+        }
+      });
+
+      it(`unique strings are generated per property`, () => {
+        class Person {
+          @Fixture({ unique: true })
+          value1!: string;
+          @Fixture({ unique: true })
+          value2!: string;
+        }
+        factory.register([Person]);
+
+        for (let i = 0; i < 10; i++) {
+          const person = factory.make(Person).one();
+          expect(person.value1).not.toBe(person.value2);
+          expect(person.value1).toMatch(
+            /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/i
+          );
+          expect(person.value2).toMatch(
+            /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/i
+          );
+        }
+      });
+
+      it(`throws when type is neither a number or a string`, () => {
+        class Person {
+          @Fixture({ unique: true })
+          value!: Set<any>;
+        }
+        factory.register([Person]);
+
+        expect(() => {
+          const res = factory.make(Person).one();
+          res.value; // when run through factory-lazy, we need to access the prop to generate it
+        }).toThrow();
+      });
+
+      it(`with uniqueCacheKey, generator is shared`, () => {
+        class Person {
+          @Fixture({ unique: true, uniqueCacheKey: 'foo' })
+          value1!: number;
+          @Fixture({ unique: true, uniqueCacheKey: 'foo' })
+          value2!: number;
+          @Fixture({ unique: true })
+          value3!: number;
+        }
+        factory.register([Person]);
+
+        for (let i = 0; i < 10; i += 2) {
+          const person = factory.make(Person).one();
+          expect(person.value1).toBe(i + 1);
+          expect(person.value2).toBe(i + 2);
+          expect(person.value3).toBe(Math.floor(i / 2) + 1);
+        }
+      });
+    });
+
     it(`string`, () => {
       class Person {
         @Fixture()

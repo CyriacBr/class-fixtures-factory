@@ -35,6 +35,8 @@ export interface PropertyMetadata {
   reuseCircularRelationships?: boolean;
   doNotReuseDirectFriendship?: boolean;
   maxOccurrencesPerPath?: number | ((value: number) => number);
+  unique?: boolean;
+  uniqueCacheKey?: string;
 }
 
 export class MetadataStore {
@@ -192,6 +194,8 @@ export class MetadataStore {
         meta.reuseCircularRelationships = decorator.reuseCircularRelationships;
         meta.doNotReuseDirectFriendship = decorator.doNotReuseDirectFriendship;
         meta.maxOccurrencesPerPath = decorator.maxOccurrencesPerPath;
+        meta.unique = decorator.unique;
+        meta.uniqueCacheKey = decorator.uniqueCacheKey;
         let inputType: any = decorator.type?.();
         if (inputType) {
           if (Array.isArray(inputType)) {

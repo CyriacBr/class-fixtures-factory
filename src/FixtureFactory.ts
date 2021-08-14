@@ -160,6 +160,7 @@ export class FixtureFactory {
   private options!: DeepRequired<FactoryOptions>;
   private assigner: Assigner = this.defaultAssigner.bind(this);
   private logger!: FactoryLogger;
+  static Generator: { [name: string]: number } = {};
 
   //@ts-expect-error
   private static DEFAULT_OPTIONS: DeepRequired<FactoryOptions> = {
@@ -442,7 +443,7 @@ export class FixtureFactory {
       this.logger.onGenerateArray(ctx.path);
       return this.makeArrayProp(prop, meta, ctx);
     } else if (prop.scalar) {
-      const value = this.makeScalarProperty(prop);
+      const value = this.makeScalarProperty(prop, meta);
       this.logger.onGenerateScalar(ctx.path, value);
       return value;
     }
@@ -450,9 +451,25 @@ export class FixtureFactory {
     return this.makeObjectProp(meta, prop, ctx);
   }
 
-  protected makeScalarProperty(prop: PropertyMetadata) {
+  protected makeScalarProperty(prop: PropertyMetadata, meta: ClassMetadata) {
     if (prop.items) {
       return faker.random.arrayElement(prop.items);
+    }
+
+    if (prop.unique) {
+      if (prop.type !== 'number' && prop.type !== 'string') {
+        throw new Error(
+          `Unique index property "${prop.name}" cannot be generated has its type is neither a string or a number`
+        );
+      }
+      const mainKey = prop.uniqueCacheKey || prop.name;
+      const key = `${mainKey}-${meta.name}-${prop.type}`;
+      if (prop.type === 'number' && !(key in FixtureFactory.Generator)) {
+        FixtureFactory.Generator[key] = 0;
+      }
+      return prop.type === 'number'
+        ? ++(FixtureFactory.Generator[key] as number)
+        : faker.random.uuid();
     }
 
     let { min, max } = prop;

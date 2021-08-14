@@ -53,6 +53,10 @@ describe('Metadata Store', () => {
       pet!: any;
       @Fixture({ ignore: true })
       foo!: string;
+      @Fixture({ unique: true })
+      uniqueFoo!: string;
+      @Fixture({ unique: true, uniqueCacheKey: 'bar' })
+      uniqueFooWithKey!: string;
     }
     class Book {
       author!: Author;
@@ -96,6 +100,21 @@ describe('Metadata Store', () => {
       const fooProp = metadata.properties.find(p => p.name === 'foo');
 
       expect(fooProp?.ignore).toBe(true);
+    });
+
+    it(`@Fixture({ unique: true })`, () => {
+      const fooProp = metadata.properties.find(p => p.name === 'uniqueFoo');
+
+      expect(fooProp?.unique).toBe(true);
+    });
+
+    it(`@Fixture({ unique: true, uniqueCacheKey })`, () => {
+      const fooProp = metadata.properties.find(
+        p => p.name === 'uniqueFooWithKey'
+      );
+
+      expect(fooProp?.unique).toBe(true);
+      expect(fooProp?.uniqueCacheKey).toBe('bar');
     });
 
     it(`string`, () => {
