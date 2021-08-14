@@ -288,7 +288,7 @@ describe(`FixtureFactory`, () => {
 
     it(`number with precision`, () => {
       class Person {
-        @Fixture({ precision: 4, min: 1000, max: 1000.9999 })
+        @Fixture({ precision: 4, min: 1000.0001, max: 1000.9999 })
         age!: number;
       }
       factory.register([Person]);
