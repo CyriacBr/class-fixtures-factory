@@ -21,7 +21,8 @@
   "files": [
     "dist",
     "plugins/class-validator",
-    "plugins/type-graphql"
+    "plugins/type-graphql",
+    "plugins/typeorm"
   ],
   "engines": {
     "node": ">=10"
@@ -29,6 +30,7 @@
   "scripts": {
     "start": "tsdx watch",
     "build": "preconstruct build",
+    "postbuild": "shx cp src/plugins/typeorm/shims.d.ts plugins/typeorm/dist/shims.d.ts ",
     "test": "tsdx test",
     "lint": "tsdx lint",
     "release:first": "standard-version --first-release",
@@ -62,17 +64,21 @@
     "lint-staged": "^10.0.8",
     "prettier": "^1.19.1",
     "reflect-metadata": "^0.1.13",
+    "shx": "^0.3.3",
+    "sqlite3": "^5.0.2",
     "standard-version": "7.1.0",
     "ts-node": "^10.1.0",
     "tsdx": "^0.14.1",
     "tslib": "^2.1.0",
     "type-graphql": "^1.1.1",
+    "typeorm": "^0.2.34",
     "typescript": "^4.3.5"
   },
   "peerDependencies": {
     "class-validator": "0.11.1",
     "graphql": "^15.5.0",
-    "type-graphql": "^1.1.1"
+    "type-graphql": "^1.1.1",
+    "typeorm": "^0.2.0"
   },
   "dependencies": {
     "@types/faker": "^4.1.10",
@@ -86,7 +92,7 @@
     "hooks": {
       "pre-commit": "lint-staged",
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
-      "pre-push": "git diff HEAD --quiet && yarn run test"
+      "pre-push": "yarn run test"
     }
   },
   "commitlint": {
@@ -143,7 +149,8 @@
     "entrypoints": [
       "./index.ts",
       "./plugins/class-validator/index.ts",
-      "./plugins/type-graphql/index.ts"
+      "./plugins/type-graphql/index.ts",
+      "./plugins/typeorm/index.ts"
     ]
   }
 }
