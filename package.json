@@ -29,6 +29,7 @@
   },
   "scripts": {
     "start": "tsdx watch",
+    "prebuild": "yarn preconstruct fix",
     "build": "preconstruct build",
     "postbuild": "shx cp src/plugins/typeorm/shims.d.ts plugins/typeorm/dist/shims.d.ts ",
     "test": "tsdx test",
