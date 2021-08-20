@@ -28,7 +28,7 @@ export interface FactoryResult<T> {
    *
    * Ignored paths result in undefined values
    */
-  ignore: (...props: DeepKeyOf<T>[]) => FactoryResult<T>;
+  ignore: (...props: string[]) => FactoryResult<T>;
   withStats: () => FactoryResult<FactoryStats<T>>;
 }
 
@@ -269,7 +269,7 @@ export class FixtureFactory {
       ignoredPaths: [],
       stats: {
         result: null,
-        instances: new Map<any, any>(),
+        instances: new WeakMap(),
         paths: [],
       },
     };
@@ -326,7 +326,7 @@ export class FixtureFactory {
         Object.assign(ctx.userInput, input);
         return result;
       },
-      ignore: (...paths: DeepKeyOf<T>[]) => {
+      ignore: (...paths: string[]) => {
         ctx.ignoredPaths = [...ctx.ignoredPaths, ...(paths as string[])];
         return result;
       },
@@ -638,10 +638,13 @@ export class FixtureFactory {
       maxDepthLevel,
       doNotReuseDirectFriendship,
     } = newCtx.options;
-    const propReuseCircularRelationships =
+    let propReuseCircularRelationships =
       prop.reuseCircularRelationships ?? reuseCircularRelationships;
-    const propDoNotReuseDirectFriendship =
+    let propDoNotReuseDirectFriendship =
       prop.doNotReuseDirectFriendship ?? doNotReuseDirectFriendship;
+    if (prop.unique) {
+      propReuseCircularRelationships = false;
+    }
 
     const occurrenceNbr = newCtx.path.filter(v => v.startsWith(typeName))
       .length;
@@ -655,7 +658,7 @@ export class FixtureFactory {
       ? ctx.arrayIndex || 0
       : 0;
 
-    const propMaxDepthLevel =
+    let propMaxDepthLevel =
       typeof prop.maxDepthLevel === 'function'
         ? prop.maxDepthLevel(maxDepthLevel)
         : prop.maxDepthLevel ?? maxDepthLevel;
@@ -664,6 +667,10 @@ export class FixtureFactory {
         ? prop.maxOccurrencesPerPath(maxOccurrencesPerPath)
         : prop.maxOccurrencesPerPath ?? maxOccurrencesPerPath;
     propMaxOccurrencesPerPath += inflatedMaxOccurrences;
+    if (prop.unique) {
+      propMaxOccurrencesPerPath += 1;
+      propMaxDepthLevel += 1;
+    }
 
     if (
       newCtx.depthLevel >= propMaxDepthLevel ||

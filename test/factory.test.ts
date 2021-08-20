@@ -219,7 +219,26 @@ describe(`FixtureFactory`, () => {
         }
       });
 
-      it(`throws when type is neither a number or a string`, () => {
+      it(`unique objects are generated properly`, () => {
+        class Author {
+          @Fixture({ type: () => [Book], min: 2 })
+          books!: Book[];
+        }
+        class Book {
+          @Fixture({ unique: true, type: () => Author })
+          author!: Author;
+        }
+        factory.register([Author, Book]);
+
+        const author = factory.make(Author).one();
+
+        expect(author.books[0]).toBeDefined();
+        expect(author.books[0].author).not.toBe(author);
+        expect(author.books[1]).toBeDefined();
+        expect(author.books[0].author).not.toBe(author.books[1].author);
+      });
+
+      it(`throws when scalar type is neither a number or a string`, () => {
         class Person {
           @Fixture({ unique: true })
           value!: Set<any>;
