@@ -56,6 +56,7 @@ export class TypeGraphQLAdapter extends BaseMetadataAdapter<FieldMetadata> {
           type: 'number',
         };
       case Float:
+        // TODO: supports min-max
         propHooks.setOnGenerateScalar(() =>
           faker.random.number({
             precision: 0.01,
@@ -111,6 +112,7 @@ export class TypeGraphQLAdapter extends BaseMetadataAdapter<FieldMetadata> {
        *  }
        * generates a value between 'UP', 'DOWN', 'LEFT' and 'RIGHT
        */
+      // TODO: use prop.items instead
       propHooks.setOnGenerateScalar(() =>
         faker.random.arrayElement(
           Object.entries(gqlType as Record<string, string | number>)

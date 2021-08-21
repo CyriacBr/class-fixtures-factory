@@ -5,32 +5,7 @@ import chalk from 'chalk';
 import { FactoryLogger } from './FactoryLogger';
 import { DeepKeyOf, DeepRequired } from 'utils/types';
 import { SECRET } from './internals';
-
-export interface FactoryResult<T> {
-  one: () => T;
-  many: (x: number) => T[];
-  /**
-   * Provide fixed values to properties of the generated classes.
-   * ```ts
-   * factory.make(Author).with({
-   *    title: 'Fixed Title',
-   *    'address.city': 'Support nested values',
-   *    'books.0': anotherBookInstance
-   * })
-   * ```
-   */
-  with: (input: Record<string, any>) => FactoryResult<T>;
-  /**
-   * Paths to be excluded from being generated
-   * ```ts
-   * factory.make(Author).ignore(['title', 'address.city', 'books.0']);
-   * ```
-   *
-   * Ignored paths result in undefined values
-   */
-  ignore: (...props: string[]) => FactoryResult<T>;
-  withStats: () => FactoryResult<FactoryStats<T>>;
-}
+import { FactoryResult } from './FactoryResult';
 
 export type Assigner = (
   prop: PropertyMetadata,
@@ -159,7 +134,7 @@ export class FixtureFactory {
   private classTypes: Record<string, Class> = {};
   private options!: DeepRequired<FactoryOptions>;
   private assigner: Assigner = this.defaultAssigner.bind(this);
-  private logger!: FactoryLogger;
+  logger!: FactoryLogger;
   static Generator: { [name: string]: number } = {};
 
   //@ts-expect-error
@@ -237,10 +212,7 @@ export class FixtureFactory {
    * Generate fixtures
    * @param classType
    */
-  make<T extends Class>(
-    classType: T,
-    options: FactoryOptions = {}
-  ): FactoryResult<InstanceType<T>> {
+  make<T extends Class>(classType: T, options: FactoryOptions = {}) {
     const ctxOptions: DeepRequired<FactoryOptions> = {
       ...this.options,
       ...(options || {}),
@@ -274,68 +246,22 @@ export class FixtureFactory {
       },
     };
     this.logger = new FactoryLogger();
-    let returnStats = false;
 
-    const result: FactoryResult<InstanceType<T>> = {
-      one: () => {
-        let error!: Error;
-        let object: any = {};
-        const startDate = new Date();
-        ctx.currentRef = object;
+    return this._getResult(ctx, classType, meta);
+  }
 
-        try {
-          object = this._make(meta, classType, ctx);
-        } catch (err) {
-          this.log(
-            chalk.red(`An error occurred while generating "${meta.name}"`),
-            true
-          );
-          if (
-            err instanceof Error &&
-            err.message.includes('Timeout: generating is taking too long')
-          ) {
-            // We discard the stacktrace because it is too long
-            error = new Error(err.message);
-          } else {
-            error = err;
-          }
-          console.error(error);
-        }
-
-        const elapsed = +new Date() - +startDate;
-        this.logger.onFinished(elapsed, !!error);
-        this.log('\n' + this.logger.log());
-
-        if (error && !ctx.options.partialResultOnError) {
-          throw error;
-        }
-
-        if (returnStats) {
-          ctx.stats.result = object;
-          return ctx.stats;
-        }
-
-        return object;
-      },
-      // TODO: call .make for each instance
-      many: (x: number) => {
-        return [...Array(x).keys()].map(() => result.one());
-      },
-      // TODO: Once TS 4.4 hit, use: https://www.typescriptlang.org/play?ts=4.4.0-dev.20210627#code/C4TwDgpgBAIg9sACgJwgMwJYA8A8AVKCLYCAOwBMBnKS4ZDUgcwD4oBeKAoki6gIj5QA-FAFQAXFAAGAOgAkAbzwBfKQG4AUBtCRYECGADSEEAHk0+VhwAUGqFADaeALqFiZKo9IQAbhGSuImLidpxuPJ5wAEYAVhAAxsDCULb29gqOhlAMUACiWPEANgCu5BA4ANYmcGicADQ0IAC2UXCFzM4haWlSiobKisUU6AwQ5OEe1HgOhoGiQoKSAgMK8EiomLgw+kYm5vgzzszMqlDKDqH2+UWl5VUgNfWNLW0doQCUEqJ8Gp-ck9lSGh-LBkvk6ABDRI4GANWj0JisSTePzITTacDQACSpDAxWAOFME14UGicUSVigClCM0BegMxjMFjwEFoHSEknhDEYmmU6J00BZtHYVNCpAhTQgnLo3M09lacAqlEkCmAGGAhSlNBlTHOzl5-MxnFZSAhwAAFtQONsGXtmSbmBp4nBSMKwGbzZIbbsmfgHSKAOQKpUyAAMMjVGogAa0ztdSRItEkOLxBKFwEp1PsfGDlDDEfVmr4kgDhTaAbqoRzcEVeYAjAWo8WoAGITG+UA
-      with: (input: Record<string, any>) => {
-        Object.assign(ctx.userInput, input);
-        return result;
-      },
-      ignore: (...paths: string[]) => {
-        ctx.ignoredPaths = [...ctx.ignoredPaths, ...(paths as string[])];
-        return result;
-      },
-      withStats: () => {
-        returnStats = true;
-        return result;
-      },
-    };
-    return result;
+  protected _getResult<T extends Class>(
+    ctx: FactoryContext,
+    classType: T,
+    meta: ClassMetadata
+  ) {
+    return new FactoryResult<T>(
+      this._make.bind(this),
+      this,
+      ctx,
+      classType,
+      meta
+    );
   }
 
   protected _make<T extends Class>(
