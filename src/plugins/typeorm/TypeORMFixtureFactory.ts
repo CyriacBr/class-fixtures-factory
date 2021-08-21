@@ -1,13 +1,13 @@
-import chalk from 'chalk';
 import { Connection, getMetadataArgsStorage } from 'typeorm';
-import { Class } from '../..';
+import { Class, ClassMetadata } from '../..';
 import {
-  FactoryOptions,
-  FactoryResult,
+  FactoryContext,
   FactoryStats,
   FixtureFactory,
+  FactoryOptions,
 } from '../../FixtureFactory';
 import { makeUnique } from '../../utils/array';
+import { TypeORMFactoryResult } from './TypeORMFactoryResult';
 
 export interface TypeORMFactoryPersistOptions {
   disableWarning?: boolean;
@@ -19,51 +19,6 @@ interface PathWithChildren {
   children: PathWithChildren[];
 }
 
-export interface TypeORMFactoryResult<T extends Class>
-  extends FactoryResult<T> {
-  /**
-   * Generate an entity and **attempts** to persist it and its relations
-   * in a brute-force way.
-   * This method is slow and can be unreliable, but is a no-brainer way
-   * to persist entities with complex relationships.
-   */
-  oneAndPersist: (
-    con: Connection,
-    options?: TypeORMFactoryPersistOptions
-  ) => Promise<T>;
-  /**
-   * Generate many instances of an entity and **attempts** to persist them and their relations
-   * in a brute-force way.
-   * This method is slow and can be unreliable, but is a no-brainer way
-   * to persist entities with complex relationships.
-   */
-  manyAndPersist: (
-    con: Connection,
-    x: number,
-    options?: TypeORMFactoryPersistOptions
-  ) => Promise<T[]>;
-  /**
-   * Provide fixed values to properties of the generated classes.
-   * ```ts
-   * factory.make(Author).with({
-   *    title: 'Fixed Title',
-   *    'address.city': 'Support nested values',
-   *    'books.0': anotherBookInstance
-   * })
-   * ```
-   */
-  with: (input: Record<string, any>) => TypeORMFactoryResult<T>;
-  /**
-   * Paths to be excluded from being generated
-   * ```ts
-   * factory.make(Author).ignore(['title', 'address.city', 'books.0']);
-   * ```
-   *
-   * Ignored paths result in undefined values
-   */
-  ignore: (...props: string[]) => TypeORMFactoryResult<T>;
-}
-
 export class TypeORMFixtureFactory extends FixtureFactory {
   registerEntities() {
     const store = getMetadataArgsStorage();
@@ -72,47 +27,24 @@ export class TypeORMFixtureFactory extends FixtureFactory {
 
   make<T extends Class>(
     classType: T,
-    options: FactoryOptions = {}
-  ): TypeORMFactoryResult<InstanceType<T>> {
-    const oldResult = super.make(classType, options);
-    const result: TypeORMFactoryResult<InstanceType<T>> = {
-      ...oldResult,
-      with: (input: Record<string, any>) => {
-        oldResult.with(input);
-        return result;
-      },
-      ignore: (...paths: string[]) => {
-        oldResult.ignore(...paths);
-        return result;
-      },
-      oneAndPersist: async (
-        con: Connection,
-        options?: TypeORMFactoryPersistOptions
-      ) => {
-        const stats = oldResult.withStats().one();
-        const withoutError = await this._persistFromStats(stats, con, options);
-        if (!withoutError) {
-          this.log(
-            chalk.yellow('Error(s) occured when persisting entities'),
-            true
-          );
-        }
-        return stats.result;
-      },
-      manyAndPersist: async (
-        con: Connection,
-        number: number,
-        options?: TypeORMFactoryPersistOptions
-      ) => {
-        return Promise.all(
-          Array(number)
-            .fill(0)
-            .map(v => result.oneAndPersist(con, options))
-        );
-      },
-    };
+    options?: FactoryOptions
+  ): TypeORMFactoryResult<T> {
+    return super.make(classType, options) as any;
+  }
 
-    return result;
+  _getResult<T extends Class>(
+    ctx: FactoryContext,
+    classType: T,
+    meta: ClassMetadata
+  ): TypeORMFactoryResult<T> {
+    return new TypeORMFactoryResult<T>(
+      this._persistFromStats.bind(this),
+      this._make.bind(this),
+      this,
+      ctx,
+      classType,
+      meta
+    );
   }
 
   /**
