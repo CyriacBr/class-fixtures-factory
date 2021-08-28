@@ -44,7 +44,7 @@ export class MetadataStore {
   protected store: Record<string, ClassMetadata> = {};
 
   constructor(
-    private adapterContext: any,
+    private adapterContext: any = {},
     private readonly acceptPartialResult = false
   ) {}
 
