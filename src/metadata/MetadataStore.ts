@@ -43,7 +43,10 @@ export class MetadataStore {
   private static adapters: BaseMetadataAdapter[] = [];
   protected store: Record<string, ClassMetadata> = {};
 
-  constructor(private readonly acceptPartialResult = false) {}
+  constructor(
+    private adapterContext: any,
+    private readonly acceptPartialResult = false
+  ) {}
 
   static addAdapter(...adapters: BaseMetadataAdapter[]) {
     MetadataStore.adapters.push(...adapters);
@@ -74,7 +77,9 @@ export class MetadataStore {
       adapter: BaseMetadataAdapter;
     } & BasePropertyMetadata)[] = [];
     for (const adapter of MetadataStore.adapters) {
-      const meta = adapter.makeOwnMetadata(classType, options).filter(Boolean);
+      const meta = adapter
+        .makeOwnMetadata(classType, this.adapterContext, options)
+        .filter(Boolean);
       adapterMetadata.push(...meta.map(v => ({ adapter, ...v })));
     }
 
@@ -122,7 +127,8 @@ export class MetadataStore {
         const deducedProp = metaProp.adapter.deduceMetadata(
           reflectProp ? Object.freeze({ ...reflectProp }) : undefined,
           Object.freeze({ ...metaProp }),
-          propHooks
+          propHooks,
+          this.adapterContext
         );
         if (!deducedProp) continue;
         Object.assign(finalDeducedProp, deducedProp);

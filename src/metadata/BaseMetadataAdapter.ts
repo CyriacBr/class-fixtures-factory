@@ -22,6 +22,7 @@ export abstract class BaseMetadataAdapter<
    */
   abstract makeOwnMetadata(
     classType: Class,
+    adapterContext: any,
     options?: DeepRequired<FactoryOptions>
   ): MetadataType[];
 
@@ -35,6 +36,7 @@ export abstract class BaseMetadataAdapter<
   abstract deduceMetadata(
     reflectProp: Readonly<PropertyMetadata> | undefined,
     ownProp: Readonly<MetadataType>,
-    propHooks: FactoryHooks
+    propHooks: FactoryHooks,
+    adapterContext: any
   ): Partial<PropertyMetadata>;
 }

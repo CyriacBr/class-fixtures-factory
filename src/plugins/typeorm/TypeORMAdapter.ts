@@ -85,6 +85,7 @@ export class TypeORMMetadataAdapter extends BaseMetadataAdapter<Metadata> {
 
   makeOwnMetadata(
     classType: Class<any>,
+    adapterContext: any,
     options?: DeepRequired<FactoryOptions>
   ): Metadata[] {
     this.options = options;

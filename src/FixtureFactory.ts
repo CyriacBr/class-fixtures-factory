@@ -105,6 +105,10 @@ export interface FactoryOptions {
    * Note that when true, an error during generation will NOT throw.
    */
   partialResultOnError?: boolean;
+  /**
+   * A context to pass to registered metadata adapters
+   */
+  adapterContext?: any;
 }
 
 export interface FactoryContext {
@@ -130,7 +134,7 @@ export interface FactoryStats<T> {
 }
 
 export class FixtureFactory {
-  private store = new MetadataStore();
+  private store: MetadataStore;
   private classTypes: Record<string, Class> = {};
   private options!: DeepRequired<FactoryOptions>;
   private assigner: Assigner = this.defaultAssigner.bind(this);
@@ -157,6 +161,7 @@ export class FixtureFactory {
       ...FixtureFactory.DEFAULT_OPTIONS,
       ...(options || {}),
     };
+    this.store = new MetadataStore(options?.adapterContext || {});
   }
 
   setOptions(options: FactoryOptions) {
