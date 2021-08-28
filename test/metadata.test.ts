@@ -1,9 +1,8 @@
-import { DefaultMetadataStore } from '../src/metadata/DefaultMetadataStore';
+import { MetadataStore } from '../src/metadata/MetadataStore';
 import { Fixture } from '../src/decorators/Fixture';
-import {
-  ClassMetadata,
-  PropertyMetadata,
-} from '../src/metadata/BaseMetadataStore';
+import { ClassMetadata, PropertyMetadata } from '../src/metadata/MetadataStore';
+import { Field } from 'type-graphql';
+import { IsPositive } from 'class-validator';
 
 enum Mood {
   HAPPY,
@@ -14,7 +13,7 @@ enum PetPreference {
   DOG = 'DOG',
   CAT = 'CAT',
 }
-const store = new DefaultMetadataStore();
+const store = new MetadataStore();
 
 describe('Metadata Store', () => {
   describe(`metadata extraction`, () => {
@@ -30,6 +29,10 @@ describe('Metadata Store', () => {
       fullName!: string;
       @Fixture()
       age!: number;
+      @Fixture({ precision: 2 })
+      ageInDecimal!: number;
+      @Fixture({ min: 2, max: 999 }) // these days you need more than one job to get through life...
+      nbrJobs!: number;
       @Fixture()
       awarded!: boolean;
       @Fixture({ enum: Mood })
@@ -50,6 +53,10 @@ describe('Metadata Store', () => {
       pet!: any;
       @Fixture({ ignore: true })
       foo!: string;
+      @Fixture({ unique: true })
+      uniqueFoo!: string;
+      @Fixture({ unique: true, uniqueCacheKey: 'bar' })
+      uniqueFooWithKey!: string;
     }
     class Book {
       author!: Author;
@@ -95,6 +102,21 @@ describe('Metadata Store', () => {
       expect(fooProp?.ignore).toBe(true);
     });
 
+    it(`@Fixture({ unique: true })`, () => {
+      const fooProp = metadata.properties.find(p => p.name === 'uniqueFoo');
+
+      expect(fooProp?.unique).toBe(true);
+    });
+
+    it(`@Fixture({ unique: true, uniqueCacheKey })`, () => {
+      const fooProp = metadata.properties.find(
+        p => p.name === 'uniqueFooWithKey'
+      );
+
+      expect(fooProp?.unique).toBe(true);
+      expect(fooProp?.uniqueCacheKey).toBe('bar');
+    });
+
     it(`string`, () => {
       const firstNameProp = metadata.properties.find(
         p => p.name === 'firstName'
@@ -110,6 +132,27 @@ describe('Metadata Store', () => {
 
       expect(ageProp).toMatchObject({
         type: 'number',
+      } as PropertyMetadata);
+    });
+
+    it(`number with min and max`, () => {
+      const nbrJobsProp = metadata.properties.find(p => p.name === 'nbrJobs');
+
+      expect(nbrJobsProp).toMatchObject({
+        type: 'number',
+        min: 2,
+        max: 999,
+      } as PropertyMetadata);
+    });
+
+    it(`number with precision`, () => {
+      const ageInDecimalProp = metadata.properties.find(
+        p => p.name === 'ageInDecimal'
+      );
+
+      expect(ageInDecimalProp).toMatchObject({
+        type: 'number',
+        precision: 2,
       } as PropertyMetadata);
     });
 
@@ -186,7 +229,7 @@ describe('Metadata Store', () => {
         surnames!: string[];
       }
       expect(() => store.make(Author)).toThrow(
-        'The type of "surnames" seems to be an array. Use @Fixture({ type: () => Foo })'
+        `Couldn't extract the type of "surnames". Use @Fixture({ type: () => Foo })`
       );
     });
 
@@ -198,6 +241,26 @@ describe('Metadata Store', () => {
       expect(() => store.make(Author)).toThrow(
         `Only pass class names to "type" in @Fixture({ type: () => Foo}) for "pet"`
       );
+    });
+
+    it(`metadata from different adapters are merged`, () => {
+      require('../src/plugins/class-validator');
+      require('../src/plugins/type-graphql');
+      class Dummy {
+        @Fixture({ max: 123456 })
+        @Field(_type => String)
+        @IsPositive()
+        val2!: any;
+      }
+
+      const metadata = store.make(Dummy).properties;
+      const propMeta = metadata.find(p => p.name === 'val2');
+
+      expect(propMeta).toMatchObject({
+        max: 123456,
+        type: 'string',
+        min: 1,
+      });
     });
   });
 });
