@@ -5,3 +5,4 @@ dist
 /plugins
 test/playground.ts
 test/fixtures/*.sqlite
+mikro-orm-temp
