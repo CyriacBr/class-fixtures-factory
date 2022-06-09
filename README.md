@@ -94,7 +94,7 @@ class Author {
 }
 ```
 
-Futhermore, `Fixture` can be used for further customization, using [faker.js](https://github.com/marak/Faker.js/#api), as stated:
+Futhermore, `Fixture` can be used for further customization, using [faker.js](https://fakerjs.dev/guide/), as stated:
 
 ```ts
 export class Author extends BaseEntity {
